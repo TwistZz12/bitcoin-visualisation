@@ -1,4 +1,14 @@
 import { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
 import "./App.css";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
@@ -37,6 +47,12 @@ function App() {
   useEffect(() => {
     loadDashboardData();
   }, []);
+  const chartData = recentTransactions.map((transaction, index) => ({
+    index: index + 1,
+    fee_rate: transaction.fee_rate,
+  }));
+
+  const anomalyThreshold = anomalyData?.threshold ?? 0;
 
   return (
     <main className="dashboard">
@@ -75,6 +91,51 @@ function App() {
           </div>
         </section>
       )}
+      {chartData.length > 0 && (
+        <section className="chart-section">
+          <h2>Recent Transactions Fee Rate</h2>
+
+          <div className="chart-card">
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="index"
+                  label={{
+                    value: "Transaction order",
+                    position: "insideBottom",
+                    offset: -5,
+                  }}
+                />
+                <YAxis
+                  label={{
+                    value: "Fee rate sat/vB",
+                    angle: -90,
+                    position: "insideLeft",
+                  }}
+                />
+                <Tooltip />
+                <ReferenceLine
+                  y={anomalyThreshold}
+                  stroke="#b42318"
+                  strokeDasharray="4 4"
+                  label="Anomaly threshold"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="fee_rate"
+                  stroke="#0f766e"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
+
+
 
       {anomalyData && (
         <section>

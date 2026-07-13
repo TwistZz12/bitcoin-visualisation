@@ -129,3 +129,14 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+.chart-section {
+  margin-top: 32px;
+}
+
+.chart-card {
+  background: white;
+  border: 1px solid #dce3ea;
+  border-radius: 8px;
+  padding: 18px;
+}
