@@ -4,7 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.connection import initialise_database
 from app.services.mempool import fetch_recent_transactions
-from app.database.transactions import get_fee_rate_anomalies,get_transaction_stats, save_transactions
+from app.database.transactions import (
+    get_transaction_anomalies,
+    get_transaction_stats,
+    save_transactions,
+)
 
 
 app = FastAPI(
@@ -47,4 +51,4 @@ def transaction_stats():
 
 @app.get("/transactions/anomalies")
 def transaction_anomalies():
-    return get_fee_rate_anomalies()
+    return get_transaction_anomalies()

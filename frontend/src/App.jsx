@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
 import "./App.css";
 
@@ -44,15 +43,21 @@ function App() {
     }
   }
 
-  useEffect(() => {
+useEffect(() => {
+  loadDashboardData();
+
+  const intervalId = setInterval(() => {
     loadDashboardData();
-  }, []);
+  }, 10000);
+
+  return () => clearInterval(intervalId);
+}, []);
+
   const chartData = recentTransactions.map((transaction, index) => ({
     index: index + 1,
     fee_rate: transaction.fee_rate,
   }));
 
-  const anomalyThreshold = anomalyData?.threshold ?? 0;
 
   return (
     <main className="dashboard">
@@ -115,12 +120,6 @@ function App() {
                   }}
                 />
                 <Tooltip />
-                <ReferenceLine
-                  y={anomalyThreshold}
-                  stroke="#b42318"
-                  strokeDasharray="4 4"
-                  label="Anomaly threshold"
-                />
                 <Line
                   type="monotone"
                   dataKey="fee_rate"
@@ -141,8 +140,9 @@ function App() {
         <section>
           <h2>Anomalies</h2>
           <p>
-            Method: fee rate greater than 3x average. Threshold:{" "}
-            {anomalyData.threshold} sat/vB.
+            Method: {anomalyData.method}. Analysed{" "}
+            {anomalyData.total_transactions_analysed} transactions. Anomaly score
+            threshold: {anomalyData.score_threshold}.
           </p>
 
           <div className="table-wrapper">
@@ -154,6 +154,7 @@ function App() {
                   <th>Vsize</th>
                   <th>Fee rate</th>
                   <th>Value</th>
+                  <th>Reason</th>
                 </tr>
               </thead>
 
@@ -165,6 +166,7 @@ function App() {
                     <td>{transaction.vsize}</td>
                     <td>{transaction.fee_rate}</td>
                     <td>{transaction.value}</td>
+                    <td>{transaction.anomaly_reasons.join(", ")}</td>
                   </tr>
                 ))}
               </tbody>
