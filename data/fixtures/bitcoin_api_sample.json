@@ -1,0 +1,21 @@
+{
+  "transactions": [
+    {
+      "txid": "api_sample_funding_001",
+      "status": {"confirmed": true, "block_height": 840112, "block_time": 1716026400},
+      "vin": [],
+      "vout": [
+        {"scriptpubkey_address": "bc1qexamplefunding", "value": 500000000}
+      ]
+    },
+    {
+      "txid": "api_sample_payment_002",
+      "status": {"confirmed": true, "block_height": 840113, "block_time": 1716026580},
+      "vin": [{"txid": "api_sample_funding_001", "vout": 0}],
+      "vout": [
+        {"scriptpubkey_address": "bc1qexamplerecipient", "value": 125000000},
+        {"scriptpubkey_address": "bc1qexamplechange", "value": 374900000}
+      ]
+    }
+  ]
+}

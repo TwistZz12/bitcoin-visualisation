@@ -21,6 +21,7 @@ DEFAULT_DATASET = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transaction
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from build_utxo_graph import build_utxo_graph  # noqa: E402
 from detect_patterns import detect_anomalies  # noqa: E402
+from normalize_transactions import normalize_transactions  # noqa: E402
 
 
 @lru_cache(maxsize=1)
@@ -28,7 +29,7 @@ def load_analysis() -> tuple[list[dict], dict, list[dict]]:
     """Load and analyse the fixture once per API process."""
     dataset = dataset_path()
     with dataset.open("r", encoding="utf-8") as file:
-        transactions = json.load(file)["transactions"]
+        transactions = normalize_transactions(json.load(file))
     return transactions, build_utxo_graph(transactions), detect_anomalies(transactions)
 
 

@@ -61,3 +61,9 @@ transaction data later.
 To switch the Python API to another transaction dataset, set
 `CHAINSCOPE_DATASET` to a JSON file containing a `transactions` array before
 starting Uvicorn.
+
+The loader accepts both ChainScope's normalized schema and common Bitcoin API
+objects with `vin`, `vout`, and `status.block_time` fields. Satoshi output
+values are converted to BTC and API addresses are mapped to the graph schema
+before anomaly detection runs. `data/fixtures/bitcoin_api_sample.json` shows
+the supported API-style format.

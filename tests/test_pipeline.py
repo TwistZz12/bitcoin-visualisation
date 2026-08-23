@@ -8,6 +8,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from build_utxo_graph import build_utxo_graph
 from detect_patterns import detect_anomalies
+from normalize_transactions import normalize_transactions
 
 
 class PipelineTests(unittest.TestCase):
@@ -36,6 +37,20 @@ class PipelineTests(unittest.TestCase):
         for anomaly in detect_anomalies(self.transactions):
             self.assertGreaterEqual(anomaly["risk_score"], 0)
             self.assertLessEqual(anomaly["risk_score"], 100)
+
+    def test_blockstream_style_transactions_are_normalized(self):
+        source = {
+            "transactions": [{
+                "txid": "api_tx_1",
+                "status": {"block_height": 100, "block_time": 1716026400},
+                "vin": [],
+                "vout": [{"scriptpubkey_address": "bc1qexample", "value": 100000000}],
+            }]
+        }
+        normalized = normalize_transactions(source)[0]
+        self.assertEqual(normalized["outputs"][0]["value_btc"], 1.0)
+        self.assertEqual(normalized["block_height"], 100)
+        self.assertTrue(normalized["timestamp"].endswith("Z"))
 
 
 if __name__ == "__main__":

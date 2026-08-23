@@ -9,6 +9,7 @@ from pathlib import Path
 
 from build_utxo_graph import build_utxo_graph
 from detect_patterns import detect_anomalies
+from normalize_transactions import normalize_transactions
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -22,9 +23,7 @@ def run_pipeline(input_file: Path = DEFAULT_INPUT) -> dict:
     with input_file.open("r", encoding="utf-8") as file:
         source_data = json.load(file)
 
-    transactions = source_data.get("transactions")
-    if not isinstance(transactions, list) or not transactions:
-        raise ValueError("Input data must contain a non-empty 'transactions' list")
+    transactions = normalize_transactions(source_data)
 
     graph = build_utxo_graph(transactions)
     anomalies = detect_anomalies(transactions)
