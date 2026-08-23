@@ -5,6 +5,7 @@ into the graph and anomaly datasets consumed by the application.
 """
 
 import json
+import os
 from pathlib import Path
 
 from build_utxo_graph import build_utxo_graph
@@ -18,8 +19,13 @@ GRAPH_OUTPUT = PROJECT_ROOT / "public" / "data" / "demo_utxo_graph.json"
 ANOMALY_OUTPUT = PROJECT_ROOT / "public" / "data" / "anomaly_clusters.json"
 
 
-def run_pipeline(input_file: Path = DEFAULT_INPUT) -> dict:
+def run_pipeline(input_file: Path | None = None) -> dict:
     """Analyse *input_file* and persist both public datasets."""
+    if input_file is None:
+        configured = os.getenv("CHAINSCOPE_DATASET")
+        input_file = Path(configured) if configured else DEFAULT_INPUT
+        if not input_file.is_absolute():
+            input_file = PROJECT_ROOT / input_file
     with input_file.open("r", encoding="utf-8") as file:
         source_data = json.load(file)
 

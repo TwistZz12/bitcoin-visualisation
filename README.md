@@ -67,3 +67,14 @@ objects with `vin`, `vout`, and `status.block_time` fields. Satoshi output
 values are converted to BTC and API addresses are mapped to the graph schema
 before anomaly detection runs. `data/fixtures/bitcoin_api_sample.json` shows
 the supported API-style format.
+
+To reproduce the checked-in real-mainnet case from the public Blockstream
+Esplora API, run:
+
+```bash
+python3 scripts/fetch_esplora_case.py
+export CHAINSCOPE_DATASET=data/fixtures/real_blockstream_case.json
+```
+
+The case contains the target transaction plus one-hop parent context and stores
+the source API, target txid, network, and retrieval timestamp in its metadata.

@@ -52,6 +52,12 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(normalized["block_height"], 100)
         self.assertTrue(normalized["timestamp"].endswith("Z"))
 
+    def test_checked_in_real_case_has_source_metadata(self):
+        case = json.loads((PROJECT_ROOT / "data" / "fixtures" / "real_blockstream_case.json").read_text(encoding="utf-8"))
+        self.assertEqual(case["metadata"]["network"], "bitcoin-mainnet")
+        self.assertEqual(case["metadata"]["transaction_count"], 3)
+        self.assertEqual(len(case["transactions"]), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

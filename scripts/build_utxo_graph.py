@@ -103,7 +103,7 @@ def build_utxo_graph(transactions: list[dict]) -> dict:
 
             if previous_utxo is None:
                 print(
-                    f"警告：交易 {transaction['txid']} 引用了不存在的 UTXO：{utxo_id}"
+                    f"Warning: transaction {transaction['txid']} references a missing UTXO: {utxo_id}"
                 )
                 continue
 
