@@ -1,0 +1,135 @@
+{
+  "transactions": [
+    {
+      "txid": "tx_coinbase_001",
+      "timestamp": "2024-05-18T10:00:00Z",
+      "block_height": 840112,
+      "inputs": [],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "miner_1",
+          "value_btc": 12.5
+        }
+      ]
+    },
+    {
+      "txid": "tx_payment_002",
+      "timestamp": "2024-05-18T10:03:00Z",
+      "block_height": 840113,
+      "inputs": [
+        {
+          "prev_txid": "tx_coinbase_001",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "merchant_1",
+          "value_btc": 4.2
+        },
+        {
+          "vout": 1,
+          "address": "wallet_a_change",
+          "value_btc": 8.25
+        }
+      ]
+    },
+    {
+      "txid": "tx_collect_003",
+      "timestamp": "2024-05-18T10:08:00Z",
+      "block_height": 840114,
+      "inputs": [
+        {
+          "prev_txid": "tx_payment_002",
+          "prev_vout": 0
+        },
+        {
+          "prev_txid": "tx_payment_002",
+          "prev_vout": 1
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "collector_wallet",
+          "value_btc": 12.3
+        }
+      ]
+    },
+    {
+      "txid": "tx_split_004",
+      "timestamp": "2024-05-18T10:10:00Z",
+      "block_height": 840115,
+      "inputs": [
+        {
+          "prev_txid": "tx_collect_003",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "recipient_1",
+          "value_btc": 3.0
+        },
+        {
+          "vout": 1,
+          "address": "recipient_2",
+          "value_btc": 3.0
+        },
+        {
+          "vout": 2,
+          "address": "recipient_3",
+          "value_btc": 3.0
+        },
+        {
+          "vout": 3,
+          "address": "wallet_b_change",
+          "value_btc": 3.1
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_005",
+      "timestamp": "2024-05-18T10:10:15Z",
+      "block_height": 840115,
+      "inputs": [{ "prev_txid": "tx_split_004", "prev_vout": 0 }],
+      "outputs": [
+        { "vout": 0, "address": "worm_hop_1", "value_btc": 2.98 },
+        { "vout": 1, "address": "miner_fee", "value_btc": 0.01 }
+      ]
+    },
+    {
+      "txid": "tx_worm_006",
+      "timestamp": "2024-05-18T10:10:35Z",
+      "block_height": 840115,
+      "inputs": [{ "prev_txid": "tx_worm_005", "prev_vout": 0 }],
+      "outputs": [
+        { "vout": 0, "address": "worm_hop_2", "value_btc": 2.96 },
+        { "vout": 1, "address": "miner_fee", "value_btc": 0.01 }
+      ]
+    },
+    {
+      "txid": "tx_worm_007",
+      "timestamp": "2024-05-18T10:10:58Z",
+      "block_height": 840115,
+      "inputs": [{ "prev_txid": "tx_worm_006", "prev_vout": 0 }],
+      "outputs": [
+        { "vout": 0, "address": "worm_hop_3", "value_btc": 2.94 },
+        { "vout": 1, "address": "miner_fee", "value_btc": 0.01 }
+      ]
+    },
+    {
+      "txid": "tx_worm_008",
+      "timestamp": "2024-05-18T10:11:22Z",
+      "block_height": 840115,
+      "inputs": [{ "prev_txid": "tx_worm_007", "prev_vout": 0 }],
+      "outputs": [
+        { "vout": 0, "address": "worm_exit", "value_btc": 2.92 },
+        { "vout": 1, "address": "miner_fee", "value_btc": 0.01 }
+      ]
+    }
+  ]
+}

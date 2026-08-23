@@ -1,91 +1,58 @@
-# Bitcoin Realtime Visualisation and Anomaly Detection
+# ChainScope
 
-A real-time dashboard for monitoring recent Bitcoin mempool transactions and identifying statistically unusual transactions.
+ChainScope is a Bitcoin transaction graph explorer for explainable anomaly
+detection. The Python pipeline builds a Transaction → UTXO → Transaction graph,
+detects Collection, Split and high-frequency Worm patterns, and exposes the
+results to the Next.js visualisation.
 
-## Project Overview
-
-The system retrieves recent unconfirmed Bitcoin transactions from the mempool.space API. A FastAPI backend calculates transaction features, stores observations in SQLite, and provides REST API endpoints. A React frontend visualises transaction activity and detected anomalies.
-
-The dashboard refreshes automatically every 10 seconds.
-
-## Current Features
-
-- Retrieves recent Bitcoin mempool transactions from mempool.space
-- Calculates transaction fee rate in sat/vB
-- Stores unique transactions in a SQLite database
-- Displays transaction statistics, including average and maximum fee rate
-- Visualises recent transaction fee rates in a line chart
-- Detects anomalies using a multi-feature Median/MAD method
-- Uses fee rate, transaction value, and virtual transaction size as anomaly features
-- Explains why each detected transaction was flagged
-- Refreshes dashboard data automatically every 10 seconds
-
-## Anomaly Detection
-
-The current baseline uses Median and Median Absolute Deviation (MAD), a robust statistical method that is less affected by extreme values than a mean-based threshold.
-
-For each transaction, the system calculates robust anomaly scores for:
-
-- Fee rate
-- Transaction value
-- Virtual size
-
-A transaction is flagged when one or more feature scores exceed the configured threshold of 3.5. The dashboard displays the reason, such as an unusually high fee rate or transaction value.
-
-This system identifies statistical anomalies, not confirmed illicit transactions.
-
-## Technology Stack
-
-- Frontend: React, JavaScript, Vite, Recharts, CSS
-- Backend: Python, FastAPI, Uvicorn, httpx
-- Database: SQLite
-- External data source: mempool.space API
-
-## System Architecture
-
-```text
-mempool.space API
-        ↓
-FastAPI backend
-        ↓
-SQLite storage and anomaly detection
-        ↓
-REST API endpoints
-        ↓
-React dashboard and visualisations
-```
-
-## API Endpoints
-
-- `GET /health` - checks that the backend is running
-- `GET /transactions/recent` - retrieves recent transactions and stores new records
-- `GET /transactions/stats` - returns transaction statistics
-- `GET /transactions/anomalies` - returns detected anomalies and explanations
-
-## Run Locally
-
-### Backend
+## Run the demo
 
 ```bash
-source backend/.venv/bin/activate
-python -m uvicorn app.main:app --reload --app-dir backend
-```
-
-The backend runs at `http://127.0.0.1:8000`.
-
-### Frontend
-
-```bash
-cd frontend
+npm install
+npm run data:pipeline
 npm run dev
 ```
 
-Open `http://localhost:5173` in a browser.
+The web app uses the local Next.js routes (`/api/graph` and `/api/anomalies`)
+by default. These routes read the reproducible datasets in `public/data`.
 
-## Future Work
+## Run the Python analysis API
 
-- Compare the Median/MAD baseline with Isolation Forest
-- Collect a larger historical dataset for experiments
-- Add temporal and graph-based transaction features
-- Evaluate detection results using labelled datasets such as Elliptic
-- Improve visualisations and add a formal experimental evaluation
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+npm run data:pipeline
+npm run backend:dev
+```
+
+The FastAPI service is available at `http://localhost:8000`. Set
+`NEXT_PUBLIC_ANALYSIS_API_URL=http://localhost:8000` before starting Next.js to
+make the UI consume the standalone Python service instead of its local routes.
+
+Useful endpoints:
+
+- `GET /api/health`
+- `GET /api/graph`
+- `GET /api/anomalies?min_risk=65`
+- `GET /api/anomalies/{cluster_id}`
+- `GET /api/transactions/{txid}`
+
+## Data flow
+
+```text
+data/fixtures/*.json
+        ↓  npm run data:pipeline
+scripts/run_pipeline.py
+        ├── public/data/demo_utxo_graph.json
+        └── public/data/anomaly_clusters.json
+        ↓
+Next.js API routes or backend/api.py
+        ↓
+app/page.tsx + app/TransactionGraph.tsx
+```
+
+The generated data is deterministic, so the same input produces the same
+graph and anomaly scores. This makes the synthetic Worm scenario suitable for
+testing and demonstrations while the API boundary is ready for real Bitcoin
+transaction data later.

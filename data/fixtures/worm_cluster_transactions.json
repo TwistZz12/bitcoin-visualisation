@@ -1,0 +1,901 @@
+{
+  "metadata": {
+    "description": "33 transactions: 8 normal context transactions and one 25-hop worm cluster",
+    "generated_at": "deterministic-demo",
+    "ground_truth": {
+      "worm_transaction_ids": [
+        "tx_worm_001",
+        "tx_worm_002",
+        "tx_worm_003",
+        "tx_worm_004",
+        "tx_worm_005",
+        "tx_worm_006",
+        "tx_worm_007",
+        "tx_worm_008",
+        "tx_worm_009",
+        "tx_worm_010",
+        "tx_worm_011",
+        "tx_worm_012",
+        "tx_worm_013",
+        "tx_worm_014",
+        "tx_worm_015",
+        "tx_worm_016",
+        "tx_worm_017",
+        "tx_worm_018",
+        "tx_worm_019",
+        "tx_worm_020",
+        "tx_worm_021",
+        "tx_worm_022",
+        "tx_worm_023",
+        "tx_worm_024",
+        "tx_worm_025"
+      ]
+    }
+  },
+  "transactions": [
+    {
+      "txid": "tx_coinbase_normal_001",
+      "timestamp": "2024-05-18T10:00:00Z",
+      "block_height": 840112,
+      "inputs": [],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "miner_normal",
+          "value_btc": 15.0
+        }
+      ]
+    },
+    {
+      "txid": "tx_salary_normal_002",
+      "timestamp": "2024-05-18T10:01:30Z",
+      "block_height": 840113,
+      "inputs": [
+        {
+          "prev_txid": "tx_coinbase_normal_001",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "salary_recipient",
+          "value_btc": 4.0
+        },
+        {
+          "vout": 1,
+          "address": "normal_wallet_a",
+          "value_btc": 10.98
+        }
+      ]
+    },
+    {
+      "txid": "tx_purchase_normal_003",
+      "timestamp": "2024-05-18T10:03:30Z",
+      "block_height": 840114,
+      "inputs": [
+        {
+          "prev_txid": "tx_salary_normal_002",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "merchant_bookshop",
+          "value_btc": 1.2
+        },
+        {
+          "vout": 1,
+          "address": "salary_recipient",
+          "value_btc": 2.79
+        }
+      ]
+    },
+    {
+      "txid": "tx_exchange_fund_004",
+      "timestamp": "2024-05-18T10:05:30Z",
+      "block_height": 840115,
+      "inputs": [
+        {
+          "prev_txid": "tx_salary_normal_002",
+          "prev_vout": 1
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "exchange_deposit",
+          "value_btc": 8.0
+        },
+        {
+          "vout": 1,
+          "address": "normal_wallet_a",
+          "value_btc": 2.96
+        }
+      ]
+    },
+    {
+      "txid": "tx_tip_normal_005",
+      "timestamp": "2024-05-18T10:07:00Z",
+      "block_height": 840116,
+      "inputs": [
+        {
+          "prev_txid": "tx_purchase_normal_003",
+          "prev_vout": 1
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "creator_tip",
+          "value_btc": 0.2
+        },
+        {
+          "vout": 1,
+          "address": "salary_recipient",
+          "value_btc": 2.58
+        }
+      ]
+    },
+    {
+      "txid": "tx_merchant_settlement_006",
+      "timestamp": "2024-05-18T10:08:30Z",
+      "block_height": 840117,
+      "inputs": [
+        {
+          "prev_txid": "tx_purchase_normal_003",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "merchant_bank",
+          "value_btc": 1.19
+        }
+      ]
+    },
+    {
+      "txid": "tx_change_normal_007",
+      "timestamp": "2024-05-18T10:10:50Z",
+      "block_height": 840118,
+      "inputs": [
+        {
+          "prev_txid": "tx_exchange_fund_004",
+          "prev_vout": 1
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "normal_wallet_b",
+          "value_btc": 2.95
+        }
+      ]
+    },
+    {
+      "txid": "tx_donation_normal_008",
+      "timestamp": "2024-05-18T10:13:10Z",
+      "block_height": 840119,
+      "inputs": [
+        {
+          "prev_txid": "tx_tip_normal_005",
+          "prev_vout": 1
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "charity",
+          "value_btc": 1.0
+        },
+        {
+          "vout": 1,
+          "address": "salary_recipient",
+          "value_btc": 1.57
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_001",
+      "timestamp": "2024-05-18T10:14:00Z",
+      "block_height": 840120,
+      "inputs": [
+        {
+          "prev_txid": "tx_exchange_fund_004",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_01",
+          "value_btc": 7.856
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_01",
+          "value_btc": 0.096
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_002",
+      "timestamp": "2024-05-18T10:14:03Z",
+      "block_height": 840120,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_001",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_02",
+          "value_btc": 7.714592
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_02",
+          "value_btc": 0.094272
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_003",
+      "timestamp": "2024-05-18T10:14:07Z",
+      "block_height": 840120,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_002",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_03",
+          "value_btc": 7.57572934
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_03",
+          "value_btc": 0.0925751
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_004",
+      "timestamp": "2024-05-18T10:14:09Z",
+      "block_height": 840120,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_003",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_04",
+          "value_btc": 7.43936621
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_00",
+          "value_btc": 0.09090875
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_005",
+      "timestamp": "2024-05-18T10:14:12Z",
+      "block_height": 840120,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_004",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_05",
+          "value_btc": 7.30545762
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_01",
+          "value_btc": 0.08927239
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_006",
+      "timestamp": "2024-05-18T10:14:16Z",
+      "block_height": 840120,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_005",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_00",
+          "value_btc": 7.17395938
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_02",
+          "value_btc": 0.08766549
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_007",
+      "timestamp": "2024-05-18T10:14:18Z",
+      "block_height": 840120,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_006",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_01",
+          "value_btc": 7.04482811
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_03",
+          "value_btc": 0.08608751
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_008",
+      "timestamp": "2024-05-18T10:14:21Z",
+      "block_height": 840121,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_007",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_02",
+          "value_btc": 6.9180212
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_00",
+          "value_btc": 0.08453794
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_009",
+      "timestamp": "2024-05-18T10:14:25Z",
+      "block_height": 840121,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_008",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_03",
+          "value_btc": 6.79349682
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_01",
+          "value_btc": 0.08301625
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_010",
+      "timestamp": "2024-05-18T10:14:27Z",
+      "block_height": 840121,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_009",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_04",
+          "value_btc": 6.67121388
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_02",
+          "value_btc": 0.08152196
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_011",
+      "timestamp": "2024-05-18T10:14:30Z",
+      "block_height": 840121,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_010",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_05",
+          "value_btc": 6.55113203
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_03",
+          "value_btc": 0.08005457
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_012",
+      "timestamp": "2024-05-18T10:14:34Z",
+      "block_height": 840121,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_011",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_00",
+          "value_btc": 6.43321165
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_00",
+          "value_btc": 0.07861358
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_013",
+      "timestamp": "2024-05-18T10:14:36Z",
+      "block_height": 840121,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_012",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_01",
+          "value_btc": 6.31741384
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_01",
+          "value_btc": 0.07719854
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_014",
+      "timestamp": "2024-05-18T10:14:39Z",
+      "block_height": 840121,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_013",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_02",
+          "value_btc": 6.20370039
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_02",
+          "value_btc": 0.07580897
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_015",
+      "timestamp": "2024-05-18T10:14:43Z",
+      "block_height": 840121,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_014",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_03",
+          "value_btc": 6.09203378
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_03",
+          "value_btc": 0.0744444
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_016",
+      "timestamp": "2024-05-18T10:14:45Z",
+      "block_height": 840122,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_015",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_04",
+          "value_btc": 5.98237717
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_00",
+          "value_btc": 0.07310441
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_017",
+      "timestamp": "2024-05-18T10:14:48Z",
+      "block_height": 840122,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_016",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_05",
+          "value_btc": 5.87469438
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_01",
+          "value_btc": 0.07178853
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_018",
+      "timestamp": "2024-05-18T10:14:52Z",
+      "block_height": 840122,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_017",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_00",
+          "value_btc": 5.76894988
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_02",
+          "value_btc": 0.07049633
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_019",
+      "timestamp": "2024-05-18T10:14:54Z",
+      "block_height": 840122,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_018",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_01",
+          "value_btc": 5.66510878
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_03",
+          "value_btc": 0.0692274
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_020",
+      "timestamp": "2024-05-18T10:14:57Z",
+      "block_height": 840122,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_019",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_02",
+          "value_btc": 5.56313682
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_00",
+          "value_btc": 0.06798131
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_021",
+      "timestamp": "2024-05-18T10:15:01Z",
+      "block_height": 840122,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_020",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_03",
+          "value_btc": 5.46300036
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_01",
+          "value_btc": 0.06675764
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_022",
+      "timestamp": "2024-05-18T10:15:03Z",
+      "block_height": 840122,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_021",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_04",
+          "value_btc": 5.36466635
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_02",
+          "value_btc": 0.065556
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_023",
+      "timestamp": "2024-05-18T10:15:06Z",
+      "block_height": 840122,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_022",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_05",
+          "value_btc": 5.26810236
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_03",
+          "value_btc": 0.064376
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_024",
+      "timestamp": "2024-05-18T10:15:10Z",
+      "block_height": 840123,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_023",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_00",
+          "value_btc": 5.17327652
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_00",
+          "value_btc": 0.06321723
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    },
+    {
+      "txid": "tx_worm_025",
+      "timestamp": "2024-05-18T10:15:12Z",
+      "block_height": 840123,
+      "inputs": [
+        {
+          "prev_txid": "tx_worm_024",
+          "prev_vout": 0
+        }
+      ],
+      "outputs": [
+        {
+          "vout": 0,
+          "address": "worm_relay_01",
+          "value_btc": 5.08015754
+        },
+        {
+          "vout": 1,
+          "address": "worm_dust_01",
+          "value_btc": 0.06207932
+        },
+        {
+          "vout": 2,
+          "address": "miner_fee_sink",
+          "value_btc": 0.001
+        }
+      ]
+    }
+  ]
+}
