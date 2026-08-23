@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATASET = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transactions.json"
+DATASET_DIR = PROJECT_ROOT / "data" / "fixtures"
 
 # The existing pure analysis functions remain the source of truth for both the
 # CLI pipeline and this HTTP service.
@@ -24,21 +25,23 @@ from detect_patterns import detect_anomalies  # noqa: E402
 from normalize_transactions import normalize_transactions  # noqa: E402
 
 
-@lru_cache(maxsize=1)
-def load_analysis() -> tuple[list[dict], dict, list[dict]]:
-    """Load and analyse the fixture once per API process."""
-    dataset = dataset_path()
-    with dataset.open("r", encoding="utf-8") as file:
+@lru_cache(maxsize=8)
+def load_analysis(dataset: str | None = None) -> tuple[list[dict], dict, list[dict]]:
+    """Load and analyse a selected dataset once per API process."""
+    source_path = dataset_path(dataset)
+    with source_path.open("r", encoding="utf-8") as file:
         transactions = normalize_transactions(json.load(file))
     return transactions, build_utxo_graph(transactions), detect_anomalies(transactions)
 
 
-def dataset_path() -> Path:
+def dataset_path(dataset: str | None = None) -> Path:
     """Resolve the configured dataset without allowing an empty path."""
-    configured = os.getenv("CHAINSCOPE_DATASET", str(DEFAULT_DATASET))
+    configured = dataset or os.getenv("CHAINSCOPE_DATASET", str(DEFAULT_DATASET))
     path = Path(configured)
     if not path.is_absolute():
-        path = PROJECT_ROOT / path
+        path = DATASET_DIR / path if dataset else PROJECT_ROOT / path
+    if dataset and (path.parent != DATASET_DIR or path.suffix.lower() != ".json"):
+        raise HTTPException(status_code=400, detail="dataset must be a JSON file in data/fixtures")
     if not path.is_file():
         raise FileNotFoundError(f"Configured dataset does not exist: {path}")
     return path
@@ -72,13 +75,13 @@ def health() -> dict:
 
 
 @app.get("/api/metadata")
-def metadata() -> dict:
-    transactions, graph_data, detected = load_analysis()
+def metadata(dataset: str | None = Query(None)) -> dict:
+    transactions, graph_data, detected = load_analysis(dataset)
     return {
         "service": "chainscope-analysis",
         "api_version": app.version,
-        "dataset": dataset_path().name,
-        "dataset_type": "Synthetic demo dataset" if "fixture" in str(dataset_path()) else "Configured transaction dataset",
+        "dataset": dataset_path(dataset).name,
+        "dataset_type": "Synthetic demo dataset" if "worm" in dataset_path(dataset).name or "demo" in dataset_path(dataset).name else "Bitcoin transaction dataset",
         "transaction_count": len(transactions),
         "anomaly_count": len(detected),
         "graph_node_count": graph_data["metadata"]["node_count"],
@@ -86,21 +89,33 @@ def metadata() -> dict:
     }
 
 
+@app.get("/api/datasets")
+def datasets() -> dict:
+    available = []
+    for path in sorted(DATASET_DIR.glob("*.json")):
+        try:
+            transactions, _, detected = load_analysis(path.name)
+            available.append({"name": path.name, "transaction_count": len(transactions), "anomaly_count": len(detected)})
+        except (ValueError, KeyError):
+            continue
+    return {"datasets": available, "selected": dataset_path().name}
+
+
 @app.get("/api/graph")
-def graph() -> dict:
-    return load_analysis()[1]
+def graph(dataset: str | None = Query(None)) -> dict:
+    return load_analysis(dataset)[1]
 
 
 @app.get("/api/anomalies")
-def anomalies(min_risk: int = Query(0, ge=0, le=100)) -> dict:
-    transactions, _, detected = load_analysis()
+def anomalies(min_risk: int = Query(0, ge=0, le=100), dataset: str | None = Query(None)) -> dict:
+    transactions, _, detected = load_analysis(dataset)
     filtered = [item for item in detected if item["risk_score"] >= min_risk]
     return {
         "metadata": {
             "source_transaction_count": len(transactions),
             "anomaly_count": len(filtered),
             "detector_version": "chainscope-pipeline-v1",
-            "source": dataset_path().name,
+            "source": dataset_path(dataset).name,
             "analysis_cached": True,
         },
         "anomalies": filtered,
@@ -108,16 +123,16 @@ def anomalies(min_risk: int = Query(0, ge=0, le=100)) -> dict:
 
 
 @app.get("/api/anomalies/{cluster_id}")
-def anomaly(cluster_id: str) -> dict:
-    match = next((item for item in load_analysis()[2] if item["id"] == cluster_id), None)
+def anomaly(cluster_id: str, dataset: str | None = Query(None)) -> dict:
+    match = next((item for item in load_analysis(dataset)[2] if item["id"] == cluster_id), None)
     if match is None:
         raise HTTPException(status_code=404, detail="Anomaly cluster not found")
     return match
 
 
 @app.get("/api/transactions/{txid}")
-def transaction(txid: str) -> dict:
-    match = next((item for item in load_analysis()[0] if item["txid"] == txid), None)
+def transaction(txid: str, dataset: str | None = Query(None)) -> dict:
+    match = next((item for item in load_analysis(dataset)[0] if item["txid"] == txid), None)
     if match is None:
         raise HTTPException(status_code=404, detail="Transaction not found")
     return match

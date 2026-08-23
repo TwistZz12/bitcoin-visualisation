@@ -15,6 +15,8 @@ npm run dev
 
 The web app uses the local Next.js routes (`/api/graph` and `/api/anomalies`)
 by default. These routes read the reproducible datasets in `public/data`.
+When `NEXT_PUBLIC_ANALYSIS_API_URL` is set, the dataset selector in the header
+uses the standalone FastAPI service and reloads the selected fixture.
 
 ## Run the Python analysis API
 
@@ -34,6 +36,7 @@ Useful endpoints:
 
 - `GET /api/health`
 - `GET /api/metadata`
+- `GET /api/datasets`
 - `GET /api/graph`
 - `GET /api/anomalies?min_risk=65`
 - `GET /api/anomalies/{cluster_id}`
