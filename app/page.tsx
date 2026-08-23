@@ -14,6 +14,13 @@ type TransactionDetails = {
   outputs: { vout: number; address: string; value_btc: number }[];
 };
 
+type AnalysisMetadata = {
+  dataset: string;
+  dataset_type: string;
+  transaction_count: number;
+  api_version?: string;
+};
+
 export default function Home() {
   const apiBase = process.env.NEXT_PUBLIC_ANALYSIS_API_URL ?? "";
   const [score, setScore] = useState(65);
@@ -25,6 +32,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [transactionDetails, setTransactionDetails] = useState<TransactionDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [metadata, setMetadata] = useState<AnalysisMetadata | null>(null);
 
   const loadTransactionDetails = useCallback(async (txid: string) => {
     setDetailsLoading(true);
@@ -40,10 +48,11 @@ export default function Home() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [anomalyResponse, graphResponse] = await Promise.all([fetch(`${apiBase}/api/anomalies`), fetch(`${apiBase}/api/graph`)]);
-        if (!anomalyResponse.ok || !graphResponse.ok) throw new Error("Unable to load analysis data from the backend API");
+        const [anomalyResponse, graphResponse, metadataResponse] = await Promise.all([fetch(`${apiBase}/api/anomalies`), fetch(`${apiBase}/api/graph`), fetch(`${apiBase}/api/metadata`)]);
+        if (!anomalyResponse.ok || !graphResponse.ok || !metadataResponse.ok) throw new Error("Unable to load analysis data from the backend API");
         const anomalyData: AnomalyData = await anomalyResponse.json();
         const graphData: UtxoGraphData = await graphResponse.json();
+        setMetadata(await metadataResponse.json() as AnalysisMetadata);
         setAnomalies(anomalyData.anomalies);
         setGraph(graphData);
         setActiveId(anomalyData.anomalies[0]?.id ?? null);
@@ -62,7 +71,7 @@ export default function Home() {
   const activeTransactionId = activeCluster.transactions[0];
 
   return <main>
-    <header><div className="brand">◈ <b>ChainScope</b><span>Anomaly Transaction Graph Explorer</span></div><div className="live">● Local demo data · {graph.metadata.transaction_count} transactions</div></header>
+    <header><div className="brand">◈ <b>ChainScope</b><span>Anomaly Transaction Graph Explorer</span></div><div className="live">● {metadata?.dataset_type ?? "Analysis API"} · {metadata?.dataset ?? "unknown dataset"} · {graph.metadata.transaction_count} transactions</div></header>
     <nav><button className="play" onClick={() => setPlaying(!playing)}>{playing ? "Ⅱ" : "▶"}</button><div><b>2024-05-18</b><small>Demo transaction window</small></div><div className="timeline"><i /><b style={{ left: playing ? "72%" : "53%" }} /></div><div className="tags">{["Collection", "Split", "Worm"].map(tag => <em key={tag}>{tag}</em>)}</div></nav>
     <section className="layout">
       <aside><label>Anomaly threshold <b>≥ {score}</b><input type="range" min="50" max="95" value={score} onChange={event => setScore(+event.target.value)} /></label><p className="eyebrow">PATTERN QUEUE</p><h1>Anomaly clusters <sup>{visibleAnomalies.length}</sup></h1>{visibleAnomalies.map(anomaly => <button className={`case ${anomaly.id === activeId ? "selected" : ""}`} onClick={() => setActiveId(anomaly.id)} key={anomaly.id}><i>{anomaly.pattern}</i><span><b>{anomaly.pattern} / {shortenId(anomaly.transactions[0])}</b><small>{anomaly.transaction_count} transaction · {anomaly.value_btc.toFixed(2)} BTC</small></span><strong>{anomaly.risk_score}</strong></button>)}</aside>

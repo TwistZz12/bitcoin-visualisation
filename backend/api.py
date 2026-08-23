@@ -5,6 +5,7 @@ Run with:
 """
 
 import json
+import os
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -13,7 +14,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-FIXTURE = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transactions.json"
+DEFAULT_DATASET = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transactions.json"
 
 # The existing pure analysis functions remain the source of truth for both the
 # CLI pipeline and this HTTP service.
@@ -25,9 +26,21 @@ from detect_patterns import detect_anomalies  # noqa: E402
 @lru_cache(maxsize=1)
 def load_analysis() -> tuple[list[dict], dict, list[dict]]:
     """Load and analyse the fixture once per API process."""
-    with FIXTURE.open("r", encoding="utf-8") as file:
+    dataset = dataset_path()
+    with dataset.open("r", encoding="utf-8") as file:
         transactions = json.load(file)["transactions"]
     return transactions, build_utxo_graph(transactions), detect_anomalies(transactions)
+
+
+def dataset_path() -> Path:
+    """Resolve the configured dataset without allowing an empty path."""
+    configured = os.getenv("CHAINSCOPE_DATASET", str(DEFAULT_DATASET))
+    path = Path(configured)
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
+    if not path.is_file():
+        raise FileNotFoundError(f"Configured dataset does not exist: {path}")
+    return path
 
 
 app = FastAPI(title="ChainScope Analysis API", version="1.0.0")
@@ -47,13 +60,29 @@ def root() -> dict:
         "service": "ChainScope Analysis API",
         "status": "ok",
         "docs": "/docs",
-        "endpoints": ["/api/health", "/api/graph", "/api/anomalies"],
+        "dataset": dataset_path().name,
+        "endpoints": ["/api/health", "/api/metadata", "/api/graph", "/api/anomalies"],
     }
 
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "service": "chainscope-analysis", "version": app.version, "analysis_cached": True}
+    return {"status": "ok", "service": "chainscope-analysis", "version": app.version, "analysis_cached": True, "dataset": dataset_path().name}
+
+
+@app.get("/api/metadata")
+def metadata() -> dict:
+    transactions, graph_data, detected = load_analysis()
+    return {
+        "service": "chainscope-analysis",
+        "api_version": app.version,
+        "dataset": dataset_path().name,
+        "dataset_type": "Synthetic demo dataset" if "fixture" in str(dataset_path()) else "Configured transaction dataset",
+        "transaction_count": len(transactions),
+        "anomaly_count": len(detected),
+        "graph_node_count": graph_data["metadata"]["node_count"],
+        "analysis_cached": True,
+    }
 
 
 @app.get("/api/graph")
@@ -70,7 +99,7 @@ def anomalies(min_risk: int = Query(0, ge=0, le=100)) -> dict:
             "source_transaction_count": len(transactions),
             "anomaly_count": len(filtered),
             "detector_version": "chainscope-pipeline-v1",
-            "source": FIXTURE.name,
+            "source": dataset_path().name,
             "analysis_cached": True,
         },
         "anomalies": filtered,

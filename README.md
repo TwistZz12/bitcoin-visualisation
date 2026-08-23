@@ -33,6 +33,7 @@ make the UI consume the standalone Python service instead of its local routes.
 Useful endpoints:
 
 - `GET /api/health`
+- `GET /api/metadata`
 - `GET /api/graph`
 - `GET /api/anomalies?min_risk=65`
 - `GET /api/anomalies/{cluster_id}`
@@ -56,3 +57,7 @@ The generated data is deterministic, so the same input produces the same
 graph and anomaly scores. This makes the synthetic Worm scenario suitable for
 testing and demonstrations while the API boundary is ready for real Bitcoin
 transaction data later.
+
+To switch the Python API to another transaction dataset, set
+`CHAINSCOPE_DATASET` to a JSON file containing a `transactions` array before
+starting Uvicorn.
