@@ -6,9 +6,12 @@ Run with:
 
 import json
 import os
+import ssl
 import sys
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATASET = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transactions.json"
 DATASET_DIR = PROJECT_ROOT / "data" / "fixtures"
+ESPLORA_API = os.getenv("CHAINSCOPE_ESPLORA_API", "https://blockstream.info/api")
 
 # The existing pure analysis functions remain the source of truth for both the
 # CLI pipeline and this HTTP service.
@@ -45,6 +49,46 @@ def dataset_path(dataset: str | None = None) -> Path:
     if not path.is_file():
         raise FileNotFoundError(f"Configured dataset does not exist: {path}")
     return path
+
+
+def fetch_esplora_json(path: str) -> object:
+    request = Request(f"{ESPLORA_API.rstrip('/')}/{path.lstrip('/')}", headers={"User-Agent": "ChainScope/1.0"})
+    context = ssl.create_default_context()
+    system_ca = Path("/etc/ssl/cert.pem")
+    if system_ca.is_file():
+        context = ssl.create_default_context(cafile=str(system_ca))
+    with urlopen(request, timeout=20, context=context) as response:
+        payload = response.read().decode("utf-8")
+        try:
+            return json.loads(payload)
+        except json.JSONDecodeError:
+            return payload.strip()
+
+
+def fetch_live_analysis(limit: int) -> dict:
+    block_hash = str(fetch_esplora_json("blocks/tip/hash"))
+    block = fetch_esplora_json(f"block/{block_hash}")
+    txids = fetch_esplora_json(f"block/{block_hash}/txids")
+    raw_transactions = [fetch_esplora_json(f"tx/{txid}") for txid in list(txids)[:limit]]
+    transactions = normalize_transactions(raw_transactions)
+    graph_data = build_utxo_graph(transactions)
+    detected = detect_anomalies(transactions)
+    return {
+        "metadata": {
+            "dataset": "live-block",
+            "dataset_type": "Bitcoin mainnet live block",
+            "source_api": ESPLORA_API,
+            "transaction_count": len(transactions),
+            "anomaly_count": len(detected),
+            "retrieved_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "block_height": block.get("height"),
+            "block_hash": block_hash,
+            "block_timestamp": block.get("timestamp"),
+        },
+        "block": block,
+        "graph": graph_data,
+        "anomalies": detected,
+    }
 
 
 app = FastAPI(title="ChainScope Analysis API", version="1.0.0")
@@ -99,6 +143,19 @@ def datasets() -> dict:
         except (ValueError, KeyError):
             continue
     return {"datasets": available, "selected": dataset_path().name}
+
+
+@app.get("/api/live/status")
+def live_status() -> dict:
+    return {"enabled": True, "source_api": ESPLORA_API, "refresh_interval_seconds": 30, "limit_default": 10}
+
+
+@app.get("/api/live/analysis")
+def live_analysis(limit: int = Query(10, ge=1, le=20)) -> dict:
+    try:
+        return fetch_live_analysis(limit)
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"Unable to fetch live Bitcoin data: {error}") from error
 
 
 @app.get("/api/graph")

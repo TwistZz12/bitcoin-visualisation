@@ -19,6 +19,9 @@ type AnalysisMetadata = {
   dataset_type: string;
   transaction_count: number;
   api_version?: string;
+  block_height?: number;
+  block_hash?: string;
+  retrieved_at?: string;
 };
 
 type DatasetOption = { name: string; transaction_count: number; anomaly_count: number };
@@ -37,6 +40,8 @@ export default function Home() {
   const [metadata, setMetadata] = useState<AnalysisMetadata | null>(null);
   const [datasets, setDatasets] = useState<DatasetOption[]>([]);
   const [dataset, setDataset] = useState<string | null>(null);
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveLoading, setLiveLoading] = useState(false);
   const datasetQuery = dataset ? `?dataset=${encodeURIComponent(dataset)}` : "";
 
   const loadTransactionDetails = useCallback(async (txid: string) => {
@@ -49,6 +54,29 @@ export default function Home() {
       setError(caughtError instanceof Error ? caughtError.message : "Unable to load transaction details");
     } finally { setDetailsLoading(false); }
   }, [apiBase, datasetQuery]);
+
+  const loadLiveAnalysis = useCallback(async () => {
+    setLiveLoading(true);
+    try {
+      const response = await fetch(`${apiBase}/api/live/analysis?limit=10`);
+      if (!response.ok) throw new Error("Unable to load the latest Bitcoin block");
+      const result = await response.json() as { metadata: AnalysisMetadata; graph: UtxoGraphData; anomalies: AnomalyCluster[] };
+      setMetadata(result.metadata);
+      setGraph(result.graph);
+      setAnomalies(result.anomalies);
+      setActiveId(result.anomalies[0]?.id ?? null);
+      setTransactionDetails(null);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to load live Bitcoin data");
+    } finally { setLiveLoading(false); }
+  }, [apiBase]);
+
+  useEffect(() => {
+    if (!liveMode) return;
+    const initialLoad = window.setTimeout(() => void loadLiveAnalysis(), 0);
+    const interval = window.setInterval(() => void loadLiveAnalysis(), 30_000);
+    return () => { window.clearTimeout(initialLoad); window.clearInterval(interval); };
+  }, [liveMode, loadLiveAnalysis]);
 
   useEffect(() => {
     async function loadData() {
@@ -81,7 +109,7 @@ export default function Home() {
   const activeTransactionId = activeCluster.transactions[0];
 
   return <main>
-    <header><div className="brand">◈ <b>ChainScope</b><span>Anomaly Transaction Graph Explorer</span></div><div className="live">● {metadata?.dataset_type ?? "Analysis API"} · <select className="dataset-select" value={dataset ?? ""} onChange={event => { setDataset(event.target.value); setTransactionDetails(null); }} aria-label="Select transaction dataset">{datasets.map(option => <option value={option.name} key={option.name}>{option.name} · {option.transaction_count} tx</option>)}</select></div></header>
+    <header><div className="brand">◈ <b>ChainScope</b><span>Anomaly Transaction Graph Explorer</span></div><div className="live"><button className={`mode-button ${!liveMode ? "active" : ""}`} onClick={() => setLiveMode(false)}>Demo</button><button className={`mode-button ${liveMode ? "active" : ""}`} onClick={() => setLiveMode(true)}>Live</button>{liveMode ? ` · block ${metadata?.block_height ?? "…"}${liveLoading ? " · refreshing…" : ""}` : <><span> · {metadata?.dataset_type ?? "Analysis API"} · </span><select className="dataset-select" value={dataset ?? ""} onChange={event => { setDataset(event.target.value); setTransactionDetails(null); }} aria-label="Select transaction dataset">{datasets.map(option => <option value={option.name} key={option.name}>{option.name} · {option.transaction_count} tx</option>)}</select></>}</div></header>
     <nav><button className="play" onClick={() => setPlaying(!playing)}>{playing ? "Ⅱ" : "▶"}</button><div><b>2024-05-18</b><small>Demo transaction window</small></div><div className="timeline"><i /><b style={{ left: playing ? "72%" : "53%" }} /></div><div className="tags">{["Collection", "Split", "Worm"].map(tag => <em key={tag}>{tag}</em>)}</div></nav>
     <section className="layout">
       <aside><label>Anomaly threshold <b>≥ {score}</b><input type="range" min="50" max="95" value={score} onChange={event => setScore(+event.target.value)} /></label><p className="eyebrow">PATTERN QUEUE</p><h1>Anomaly clusters <sup>{visibleAnomalies.length}</sup></h1>{visibleAnomalies.map(anomaly => <button className={`case ${anomaly.id === activeId ? "selected" : ""}`} onClick={() => setActiveId(anomaly.id)} key={anomaly.id}><i>{anomaly.pattern}</i><span><b>{anomaly.pattern} / {shortenId(anomaly.transactions[0])}</b><small>{anomaly.transaction_count} transaction · {anomaly.value_btc.toFixed(2)} BTC</small></span><strong>{anomaly.risk_score}</strong></button>)}</aside>

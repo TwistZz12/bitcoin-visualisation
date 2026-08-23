@@ -41,6 +41,8 @@ Useful endpoints:
 - `GET /api/anomalies?min_risk=65`
 - `GET /api/anomalies/{cluster_id}`
 - `GET /api/transactions/{txid}`
+- `GET /api/live/status`
+- `GET /api/live/analysis?limit=10`
 
 ## Data flow
 
@@ -60,6 +62,10 @@ The generated data is deterministic, so the same input produces the same
 graph and anomaly scores. This makes the synthetic Worm scenario suitable for
 testing and demonstrations while the API boundary is ready for real Bitcoin
 transaction data later.
+
+Live mode uses the public Bitcoin Esplora endpoints for the current tip hash,
+block transaction IDs, and transaction details. The UI refreshes at most every
+30 seconds and limits each analysis request to 10 transactions by default.
 
 To switch the Python API to another transaction dataset, set
 `CHAINSCOPE_DATASET` to a JSON file containing a `transactions` array before
