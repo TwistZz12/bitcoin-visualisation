@@ -74,7 +74,8 @@ export default function Home() {
 
   if (loading) return <main className="loading-state">Loading transaction graph data…</main>;
   const activeCluster = anomalies.find(anomaly => anomaly.id === activeId);
-  if (error || !graph || !activeCluster) return <main className="loading-state">Unable to load data: {error ?? "No anomalous transactions were detected"}</main>;
+  if (error || !graph) return <main className="loading-state">Unable to load data: {error ?? "The analysis API returned no graph"}</main>;
+  if (!activeCluster) return <main className="loading-state"><div className="empty-state"><b>No anomalous transactions detected</b><span>{metadata?.dataset ?? "This dataset"} contains no patterns above the current detection rules.</span><small>Choose a dataset with a known anomaly, such as the Worm demo, to explore the anomaly graph.</small></div></main>;
 
   const visibleAnomalies = anomalies.filter(anomaly => anomaly.risk_score >= score);
   const activeTransactionId = activeCluster.transactions[0];

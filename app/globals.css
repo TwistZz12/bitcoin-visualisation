@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 .dataset-select{max-width:260px;margin-left:4px;padding:4px 6px;border:1px solid #31575b;border-radius:5px;background:#0d2025;color:var(--cyan);font-size:10px}
+.empty-state{display:flex;flex-direction:column;gap:10px;max-width:440px;padding:28px;border:1px solid #29464b;border-radius:10px;background:#0d2025;text-align:center}.empty-state b{color:var(--cyan);font-size:18px}.empty-state span,.empty-state small{color:var(--muted);font-size:12px;line-height:1.5}
 
 /* Whole-graph state: orange identifies the currently selected anomaly path. */
 .worm-dot{display:inline-block;width:9px;height:9px;background:var(--orange);border-radius:50%;margin-left:5px;box-shadow:0 0 10px var(--orange)}
