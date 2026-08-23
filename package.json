@@ -12,6 +12,7 @@
     "data:worm": "python3 scripts/generate_worm_fixture.py",
     "data:pipeline": "python3 scripts/run_pipeline.py",
     "backend:dev": "uvicorn backend.api:app --reload --port 8000",
+    "test:python": "python3 -m unittest discover -s tests -v",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"

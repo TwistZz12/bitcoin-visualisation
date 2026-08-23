@@ -9,6 +9,7 @@ type SelectedNode = {
   kind: "transaction" | "utxo";
   title: string;
   subtitle: string;
+  txid?: string;
   address?: string;
 };
 
@@ -36,6 +37,7 @@ function selectedNodeData(node: NodeSingular): SelectedNode {
   if (node.data("type") === "transaction") {
     return {
       kind: "transaction",
+      txid: node.data("txid"),
       title: `Transaction ${shortId(node.data("txid"))}`,
       subtitle: `${node.data("input_count")} inputs · ${node.data("output_count")} outputs · block ${node.data("block_height")}`,
     };
@@ -48,7 +50,7 @@ function selectedNodeData(node: NodeSingular): SelectedNode {
   };
 }
 
-export default function TransactionGraph({ graph, cluster }: { graph: UtxoGraphData; cluster: AnomalyCluster }) {
+export default function TransactionGraph({ graph, cluster, onTransactionSelect }: { graph: UtxoGraphData; cluster: AnomalyCluster; onTransactionSelect?: (txid: string) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<Core | null>(null);
   const [showBackground, setShowBackground] = useState(true);
@@ -148,14 +150,18 @@ export default function TransactionGraph({ graph, cluster }: { graph: UtxoGraphD
       ],
     });
     coreRef.current = core;
-    core.on("tap", "node", event => setSelectedNode(selectedNodeData(event.target)));
+    core.on("tap", "node", event => {
+      const details = selectedNodeData(event.target);
+      setSelectedNode(details);
+      if (details.kind === "transaction" && details.txid) onTransactionSelect?.(details.txid);
+    });
     core.on("tap", event => { if (event.target === core) setSelectedNode(null); });
     runLayout(core);
     return () => {
       core.destroy();
       coreRef.current = null;
     };
-  }, [elements]);
+  }, [elements, onTransactionSelect]);
 
   return <div className="cy-shell">
     <div className="cy-toolbar">

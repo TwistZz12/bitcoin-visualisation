@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AnomalyCluster, AnomalyData, UtxoGraphData } from "@/types/graph";
 import TransactionGraph from "./TransactionGraph";
 
 function shortenId(id: string) { return id.length > 16 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id; }
+
+type TransactionDetails = {
+  txid: string;
+  timestamp: string;
+  block_height: number;
+  inputs: { prev_txid: string; prev_vout: number }[];
+  outputs: { vout: number; address: string; value_btc: number }[];
+};
 
 export default function Home() {
   const apiBase = process.env.NEXT_PUBLIC_ANALYSIS_API_URL ?? "";
@@ -15,6 +23,19 @@ export default function Home() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [transactionDetails, setTransactionDetails] = useState<TransactionDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  const loadTransactionDetails = useCallback(async (txid: string) => {
+    setDetailsLoading(true);
+    try {
+      const response = await fetch(`${apiBase}/api/transactions/${encodeURIComponent(txid)}`);
+      if (!response.ok) throw new Error("Unable to load transaction details");
+      setTransactionDetails(await response.json() as TransactionDetails);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to load transaction details");
+    } finally { setDetailsLoading(false); }
+  }, [apiBase]);
 
   useEffect(() => {
     async function loadData() {
@@ -48,10 +69,10 @@ export default function Home() {
       <article>
         <div className="title"><div><p className="eyebrow">GRAPH EXPLORER · UTXO ANOMALY CLUSTER</p><h2>{activeCluster.pattern} / {activeCluster.transaction_count} transaction{activeCluster.transaction_count > 1 ? "s" : ""}</h2></div><div className="legend"><span className="tx-dot" /> Transaction <span className="utxo-dot" /> UTXO <span className="worm-dot" /> Main value <span className="reuse-key" /> Address reuse</div></div>
         <div className="graph">
-          <TransactionGraph graph={graph} cluster={activeCluster} />
+          <TransactionGraph graph={graph} cluster={activeCluster} onTransactionSelect={loadTransactionDetails} />
         </div><footer>Interactive anomaly cluster · {graph.metadata.node_count} nodes · {graph.metadata.edge_count} relationships · {graph.metadata.reused_address_count ?? 0} reused addresses</footer>
       </article>
-      <aside className="explain"><p className="eyebrow">EXPLAINABILITY</p><h2>Anomaly rationale <sup>Risk {activeCluster.risk_score}</sup></h2><div className="card"><i>{activeCluster.pattern}</i><div><b>{activeCluster.pattern} / {activeTransactionId}</b><p>Evidence combines UTXO lineage, temporal density, value structure, and address reuse.</p></div></div><div className="metrics"><span>Transactions<b>{activeCluster.transaction_count}</b></span><span>Value involved<b>{activeCluster.value_btc.toFixed(2)} BTC</b></span><span>Avg. hop<b>{activeCluster.features?.avg_hop_seconds ?? "–"} sec</b></span><span>Address reuse<b>{activeCluster.features?.address_reuse_count ?? "–"}</b></span></div><h3>Evidence</h3><div className="evidence">{activeCluster.evidence.map(item => <p key={item}>✓ {item}</p>)}</div><h3>Analysis path</h3><div className="steps">Detect ━ <b>Locate</b> ━ Verify</div><button className="inspect">Open transaction details →</button></aside>
+      <aside className="explain"><p className="eyebrow">EXPLAINABILITY</p><h2>Anomaly rationale <sup>Risk {activeCluster.risk_score}</sup></h2><div className="card"><i>{activeCluster.pattern}</i><div><b>{activeCluster.pattern} / {activeTransactionId}</b><p>Evidence combines UTXO lineage, temporal density, value structure, and address reuse.</p></div></div><div className="metrics"><span>Transactions<b>{activeCluster.transaction_count}</b></span><span>Value involved<b>{activeCluster.value_btc.toFixed(2)} BTC</b></span><span>Avg. hop<b>{activeCluster.features?.avg_hop_seconds ?? "–"} sec</b></span><span>Address reuse<b>{activeCluster.features?.address_reuse_count ?? "–"}</b></span></div><h3>Evidence</h3><div className="evidence">{activeCluster.evidence.map(item => <p key={item}>✓ {item}</p>)}</div><h3>Analysis path</h3><div className="steps">Detect ━ <b>Locate</b> ━ Verify</div>{transactionDetails && <div className="transaction-details"><b>{shortenId(transactionDetails.txid)}</b><span>{new Date(transactionDetails.timestamp).toLocaleString()} · block {transactionDetails.block_height}</span><span>{transactionDetails.inputs.length} inputs · {transactionDetails.outputs.length} outputs</span><small>{transactionDetails.outputs.map(output => `${output.value_btc.toFixed(4)} BTC → ${output.address}`).join(" · ")}</small></div>}<button className="inspect" onClick={() => loadTransactionDetails(activeTransactionId)}>{detailsLoading ? "Loading transaction details…" : "Open transaction details →"}</button></aside>
     </section>
   </main>;
 }

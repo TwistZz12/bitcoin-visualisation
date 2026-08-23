@@ -6,6 +6,7 @@ Run with:
 
 import json
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
@@ -21,7 +22,9 @@ from build_utxo_graph import build_utxo_graph  # noqa: E402
 from detect_patterns import detect_anomalies  # noqa: E402
 
 
-def load_analysis() -> tuple[dict, list[dict], list[dict]]:
+@lru_cache(maxsize=1)
+def load_analysis() -> tuple[list[dict], dict, list[dict]]:
+    """Load and analyse the fixture once per API process."""
     with FIXTURE.open("r", encoding="utf-8") as file:
         transactions = json.load(file)["transactions"]
     return transactions, build_utxo_graph(transactions), detect_anomalies(transactions)
@@ -50,7 +53,7 @@ def root() -> dict:
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok", "service": "chainscope-analysis", "version": app.version}
+    return {"status": "ok", "service": "chainscope-analysis", "version": app.version, "analysis_cached": True}
 
 
 @app.get("/api/graph")
@@ -67,6 +70,8 @@ def anomalies(min_risk: int = Query(0, ge=0, le=100)) -> dict:
             "source_transaction_count": len(transactions),
             "anomaly_count": len(filtered),
             "detector_version": "chainscope-pipeline-v1",
+            "source": FIXTURE.name,
+            "analysis_cached": True,
         },
         "anomalies": filtered,
     }
