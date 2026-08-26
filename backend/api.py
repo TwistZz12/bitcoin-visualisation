@@ -20,6 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATASET = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transactions.json"
 DATASET_DIR = PROJECT_ROOT / "data" / "fixtures"
 ESPLORA_API = os.getenv("CHAINSCOPE_ESPLORA_API", "https://blockstream.info/api")
+LIVE_WINDOW_CACHE: dict[tuple[str, int, int], dict] = {}
 
 # The existing pure analysis functions remain the source of truth for both the
 # CLI pipeline and this HTTP service.
@@ -65,30 +66,78 @@ def fetch_esplora_json(path: str) -> object:
             return payload.strip()
 
 
-def fetch_live_analysis(limit: int) -> dict:
-    block_hash = str(fetch_esplora_json("blocks/tip/hash"))
-    block = fetch_esplora_json(f"block/{block_hash}")
-    txids = fetch_esplora_json(f"block/{block_hash}/txids")
-    raw_transactions = [fetch_esplora_json(f"tx/{txid}") for txid in list(txids)[:limit]]
-    transactions = normalize_transactions(raw_transactions)
+def build_live_overview(blocks: list[dict], transactions_by_block: list[list[dict]], anomalies: list[dict]) -> list[dict]:
+    """Summarize risk events per block for the overview layer."""
+    risk_by_txid = {
+        txid: anomaly["risk_score"]
+        for anomaly in anomalies
+        for txid in anomaly["transactions"]
+    }
+    overview = []
+    for block, block_transactions in zip(blocks, transactions_by_block, strict=True):
+        scores = [risk_by_txid[transaction["txid"]] for transaction in block_transactions if transaction["txid"] in risk_by_txid]
+        overview.append({
+            "height": block.get("height"),
+            "timestamp": block.get("timestamp"),
+            "transaction_count": len(block_transactions),
+            "anomaly_count": len(scores),
+            "max_risk": max(scores, default=0),
+        })
+    return list(reversed(overview))
+
+
+def fetch_live_analysis(window_blocks: int, transactions_per_block: int) -> dict:
+    """Build a cached rolling window from consecutive recent Bitcoin blocks."""
+    tip_hash = str(fetch_esplora_json("blocks/tip/hash"))
+    cache_key = (tip_hash, window_blocks, transactions_per_block)
+    if cache_key in LIVE_WINDOW_CACHE:
+        cached = LIVE_WINDOW_CACHE[cache_key]
+        cached["metadata"]["cache_hit"] = True
+        return cached
+
+    blocks = []
+    raw_transactions_by_block = []
+    current_hash = tip_hash
+    for _ in range(window_blocks):
+        block = fetch_esplora_json(f"block/{current_hash}")
+        if not isinstance(block, dict):
+            raise ValueError("Esplora returned an invalid block record")
+        raw_transactions = fetch_esplora_json(f"block/{current_hash}/txs/0")
+        if not isinstance(raw_transactions, list):
+            raise ValueError("Esplora returned an invalid block transaction list")
+        blocks.append(block)
+        raw_transactions_by_block.append(raw_transactions[:transactions_per_block])
+        previous_hash = block.get("previousblockhash")
+        if not previous_hash:
+            break
+        current_hash = previous_hash
+
+    transactions_by_block = [normalize_transactions(items) for items in raw_transactions_by_block]
+    transactions = [transaction for items in transactions_by_block for transaction in items]
     graph_data = build_utxo_graph(transactions)
     detected = detect_anomalies(transactions)
-    return {
+    result = {
         "metadata": {
-            "dataset": "live-block",
-            "dataset_type": "Bitcoin mainnet live block",
+            "dataset": "live-rolling-window",
+            "dataset_type": "Bitcoin mainnet rolling window",
             "source_api": ESPLORA_API,
             "transaction_count": len(transactions),
             "anomaly_count": len(detected),
             "retrieved_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "block_height": block.get("height"),
-            "block_hash": block_hash,
-            "block_timestamp": block.get("timestamp"),
+            "block_height": blocks[0].get("height"),
+            "block_hash": tip_hash,
+            "window_block_count": len(blocks),
+            "transactions_per_block": transactions_per_block,
+            "cache_hit": False,
         },
-        "block": block,
+        "overview": build_live_overview(blocks, transactions_by_block, detected),
         "graph": graph_data,
         "anomalies": detected,
+        "transactions": transactions,
     }
+    LIVE_WINDOW_CACHE.clear()
+    LIVE_WINDOW_CACHE[cache_key] = result
+    return result
 
 
 app = FastAPI(title="ChainScope Analysis API", version="1.0.0")
@@ -147,15 +196,24 @@ def datasets() -> dict:
 
 @app.get("/api/live/status")
 def live_status() -> dict:
-    return {"enabled": True, "source_api": ESPLORA_API, "refresh_interval_seconds": 30, "limit_default": 10}
+    return {"enabled": True, "source_api": ESPLORA_API, "refresh_interval_seconds": 30, "window_blocks_default": 6, "transactions_per_block_default": 25}
 
 
 @app.get("/api/live/analysis")
-def live_analysis(limit: int = Query(10, ge=1, le=20)) -> dict:
+def live_analysis(window_blocks: int = Query(6, ge=2, le=12), transactions_per_block: int = Query(25, ge=5, le=25)) -> dict:
     try:
-        return fetch_live_analysis(limit)
+        return fetch_live_analysis(window_blocks, transactions_per_block)
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"Unable to fetch live Bitcoin data: {error}") from error
+
+
+@app.get("/api/live/transactions/{txid}")
+def live_transaction(txid: str) -> dict:
+    for snapshot in LIVE_WINDOW_CACHE.values():
+        match = next((transaction for transaction in snapshot["transactions"] if transaction["txid"] == txid), None)
+        if match is not None:
+            return match
+    raise HTTPException(status_code=404, detail="Transaction is not in the current live window")
 
 
 @app.get("/api/graph")
