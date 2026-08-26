@@ -53,7 +53,7 @@ function selectedNodeData(node: NodeSingular): SelectedNode {
 export default function TransactionGraph({ graph, cluster, onTransactionSelect }: { graph: UtxoGraphData; cluster: AnomalyCluster; onTransactionSelect?: (txid: string) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<Core | null>(null);
-  const [showBackground, setShowBackground] = useState(true);
+  const [showBackground, setShowBackground] = useState(false);
   const [showAddressReuse, setShowAddressReuse] = useState(true);
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
 
@@ -81,6 +81,18 @@ export default function TransactionGraph({ graph, cluster, onTransactionSelect }
         ? activeTransactions.has(node.txid ?? "")
         : activeTransactions.has(node.txid ?? "");
       if (showBackground || active) visibleNodeIds.add(node.id);
+    }
+    // In focused mode, include the one-hop UTXO lineage around the selected
+    // anomaly so different single-transaction clusters produce distinct views.
+    if (!showBackground) {
+      for (const edge of graph.edges) {
+        const source = nodesById.get(edge.source);
+        const target = nodesById.get(edge.target);
+        if (activeTransactions.has(source?.txid ?? "") || activeTransactions.has(target?.txid ?? "")) {
+          visibleNodeIds.add(edge.source);
+          visibleNodeIds.add(edge.target);
+        }
+      }
     }
     // Keep the funding UTXO and its source transaction visible at the head of the anomaly.
     for (const edge of graph.edges.filter(item => item.type === "spends")) {
