@@ -58,6 +58,21 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(case["metadata"]["transaction_count"], 3)
         self.assertEqual(len(case["transactions"]), 3)
 
+    def test_missing_parent_inputs_are_represented_as_external_utxos(self):
+        source = {
+            "transactions": [{
+                "txid": "child",
+                "timestamp": "2024-01-01T00:00:00Z",
+                "block_height": 1,
+                "inputs": [{"prev_txid": "parent", "prev_vout": 0, "prevout": {"address": "bc1qexternal", "value_btc": 0.5}}],
+                "outputs": [{"vout": 0, "address": "bc1qrecipient", "value_btc": 0.49}],
+            }]
+        }
+        graph = build_utxo_graph(source["transactions"])
+        external = [node for node in graph["nodes"] if node.get("external")]
+        self.assertEqual(len(external), 1)
+        self.assertEqual(external[0]["value_btc"], 0.5)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -17,6 +17,7 @@ export interface GraphNode {
   address?: string;
   value_btc?: number;
   spent_by?: string | null;
+  external?: boolean;
 }
 
 export interface GraphEdge {

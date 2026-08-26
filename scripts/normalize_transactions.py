@@ -34,7 +34,14 @@ def normalize_transaction(transaction: dict) -> dict:
         if prev_txid is None or prev_vout is None:
             # Coinbase inputs do not spend a previous UTXO.
             continue
-        inputs.append({"prev_txid": prev_txid, "prev_vout": int(prev_vout)})
+        normalized_input = {"prev_txid": prev_txid, "prev_vout": int(prev_vout)}
+        prevout = tx_input.get("prevout")
+        if isinstance(prevout, dict):
+            normalized_input["prevout"] = {
+                "address": prevout.get("scriptpubkey_address") or prevout.get("address"),
+                "value_btc": _value_btc(prevout),
+            }
+        inputs.append(normalized_input)
 
     outputs = []
     for index, output in enumerate(transaction.get("outputs", transaction.get("vout", []))):

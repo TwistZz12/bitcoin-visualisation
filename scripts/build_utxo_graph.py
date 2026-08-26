@@ -102,10 +102,22 @@ def build_utxo_graph(transactions: list[dict]) -> dict:
             previous_utxo = utxo_index.get(utxo_id)
 
             if previous_utxo is None:
-                print(
-                    f"Warning: transaction {transaction['txid']} references a missing UTXO: {utxo_id}"
-                )
-                continue
+                # Live windows often omit the parent transaction. Use the
+                # prevout metadata supplied by Esplora as an external input
+                # node so the selected transaction still shows all inputs.
+                prevout = tx_input.get("prevout", {})
+                previous_utxo = {
+                    "id": utxo_id,
+                    "type": "utxo",
+                    "txid": tx_input["prev_txid"],
+                    "vout": tx_input["prev_vout"],
+                    "address": prevout.get("address", "external input"),
+                    "value_btc": prevout.get("value_btc", 0),
+                    "spent_by": None,
+                    "external": True,
+                }
+                nodes.append(previous_utxo)
+                utxo_index[utxo_id] = previous_utxo
 
             previous_utxo["spent_by"] = transaction["txid"]
 

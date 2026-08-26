@@ -111,11 +111,12 @@ export default function TransactionGraph({ graph, cluster, onTransactionSelect }
       const classes = [node.type, active ? "anomaly" : "context"];
       if (mainUtxos.has(node.id)) classes.push("main-value");
       if (smallUtxos.has(node.id)) classes.push("small-output");
+      if (node.external) classes.push("external");
       result.push({
         group: "nodes",
         data: {
           ...node,
-          label: node.type === "transaction" ? shortId(node.txid ?? node.id) : `${node.value_btc?.toFixed(3)} BTC`,
+          label: node.type === "transaction" ? shortId(node.txid ?? node.id) : `${node.value_btc && node.value_btc > 0 ? node.value_btc.toFixed(6) : "external"} BTC`,
         },
         classes: classes.join(" "),
       });
@@ -151,6 +152,7 @@ export default function TransactionGraph({ graph, cluster, onTransactionSelect }
         { selector: "node.utxo", style: { shape: "round-rectangle", width: "mapData(value_btc, 0, 8, 7, 31)", height: "mapData(value_btc, 0, 8, 7, 31)", "background-color": "#517ac5", "border-width": 1, "border-color": "#83aaf6", label: "" } },
         { selector: "node.utxo.anomaly.main-value", style: { "background-color": "#ffad58", "border-width": 2, "border-color": "#ffe0af", "shadow-blur": 13, "shadow-color": "#ff9b3d", "shadow-opacity": 0.75 } },
         { selector: "node.utxo.anomaly.small-output", style: { "background-color": "#697fd2", "border-color": "#9eaef5" } },
+        { selector: "node.utxo.external", style: { "background-color": "#34444b", "border-color": "#9aaeb1", "border-style": "dashed", color: "#c3d0d2" } },
         { selector: "node.context", style: { opacity: 0.32 } },
         { selector: "edge", style: { width: 1.2, "curve-style": "bezier", "target-arrow-shape": "triangle", "arrow-scale": 0.65, opacity: 0.5 } },
         { selector: "edge.creates", style: { "line-color": "#5885d5", "target-arrow-color": "#5885d5" } },
