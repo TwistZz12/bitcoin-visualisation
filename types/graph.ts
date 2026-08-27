@@ -18,6 +18,9 @@ export interface GraphNode {
   value_btc?: number;
   spent_by?: string | null;
   external?: boolean;
+  entity_label?: string;
+  entity_category?: string;
+  label_confidence?: string;
 }
 
 export interface GraphEdge {
@@ -64,6 +67,12 @@ export interface AnomalyCluster {
     avg_branching_factor: number;
     value_retention_ratio: number;
   };
+  entity_labels?: Array<{
+    address: string;
+    entity: string;
+    category: string;
+    confidence: string;
+  }>;
   evidence: string[];
 }
 

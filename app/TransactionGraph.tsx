@@ -11,6 +11,8 @@ type SelectedNode = {
   subtitle: string;
   txid?: string;
   address?: string;
+  entityLabel?: string;
+  entityCategory?: string;
 };
 
 function shortId(id: string) {
@@ -47,6 +49,8 @@ function selectedNodeData(node: NodeSingular): SelectedNode {
     title: `UTXO #${node.data("vout")} · ${Number(node.data("value_btc")).toFixed(4)} BTC`,
     subtitle: node.data("spent_by") ? `Spent by ${shortId(node.data("spent_by"))}` : "Unspent output",
     address: node.data("address"),
+    entityLabel: node.data("entity_label"),
+    entityCategory: node.data("entity_category"),
   };
 }
 
@@ -191,6 +195,7 @@ export default function TransactionGraph({ graph, cluster, onTransactionSelect }
       <b>{selectedNode.title}</b>
       <span>{selectedNode.subtitle}</span>
       {selectedNode.address && <code>{selectedNode.address}</code>}
+      {selectedNode.entityLabel && <span>{selectedNode.entityCategory}: {selectedNode.entityLabel}</span>}
     </div>}
   </div>;
 }

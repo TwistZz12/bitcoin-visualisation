@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "description": "Local address-intelligence labels used by the ChainScope demonstration dataset.",
+    "source": "Synthetic demonstration label; not a real-world exchange attribution."
+  },
+  "labels": [
+    {
+      "address": "exchange_deposit",
+      "entity": "DemoExchange",
+      "category": "Exchange",
+      "confidence": "Demonstration"
+    }
+  ]
+}

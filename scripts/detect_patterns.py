@@ -33,7 +33,23 @@ def get_output_statistics(transaction: dict) -> dict:
     }
 
 
-def detect_collection(transaction: dict) -> dict | None:
+def entity_labels_for_addresses(addresses: set[str], address_labels: dict[str, dict]) -> list[dict]:
+    """Expose known entity context without treating it as proof of wrongdoing."""
+    return [
+        {"address": address, **address_labels[address]}
+        for address in sorted(addresses)
+        if address in address_labels
+    ]
+
+
+def entity_evidence(entity_labels: list[dict]) -> list[str]:
+    return [
+        f"Flow touches labelled {item['category']} entity {item['entity']} ({item['confidence']} confidence)"
+        for item in entity_labels
+    ]
+
+
+def detect_collection(transaction: dict, address_labels: dict[str, dict] | None = None) -> dict | None:
     """
     归集型交易：
     多个输入汇集到一个或少量主要输出中。
@@ -57,6 +73,9 @@ def detect_collection(transaction: dict) -> dict | None:
         + int(stats["largest_output_ratio"] * 15)
     )
 
+    entity_labels = entity_labels_for_addresses(
+        {output["address"] for output in transaction["outputs"]}, address_labels or {}
+    )
     return {
         "id": f"collection:{transaction['txid']}",
         "pattern": "Collection",
@@ -68,15 +87,16 @@ def detect_collection(transaction: dict) -> dict | None:
             "start": transaction["timestamp"],
             "end": transaction["timestamp"]
         },
+        "entity_labels": entity_labels,
         "evidence": [
             f"{input_count} input UTXOs converge in this transaction",
             f"The largest output represents {stats['largest_output_ratio']:.0%} of the total output value",
             f"The transaction creates only {stats['output_count']} outputs"
-        ]
+        ] + entity_evidence(entity_labels)
     }
 
 
-def detect_split(transaction: dict) -> dict | None:
+def detect_split(transaction: dict, address_labels: dict[str, dict] | None = None) -> dict | None:
     """
     拆分型交易：
     少量输入被拆成多个输出。
@@ -100,6 +120,9 @@ def detect_split(transaction: dict) -> dict | None:
         + (2 - input_count) * 5
     )
 
+    entity_labels = entity_labels_for_addresses(
+        {output["address"] for output in transaction["outputs"]}, address_labels or {}
+    )
     return {
         "id": f"split:{transaction['txid']}",
         "pattern": "Split",
@@ -111,15 +134,16 @@ def detect_split(transaction: dict) -> dict | None:
             "start": transaction["timestamp"],
             "end": transaction["timestamp"]
         },
+        "entity_labels": entity_labels,
         "evidence": [
             f"The transaction uses only {input_count} input UTXOs",
             f"It creates {stats['output_count']} output UTXOs",
             f"The largest output accounts for {stats['largest_output_ratio']:.0%}, indicating dispersed value"
-        ]
+        ] + entity_evidence(entity_labels)
     }
 
 
-def detect_worms(transactions: list[dict]) -> list[dict]:
+def detect_worms(transactions: list[dict], address_labels: dict[str, dict] | None = None) -> list[dict]:
     """检测高频 Worm：主 UTXO 快速连续花费，并伴随小额输出和地址复用。"""
     spent_by = {
         (tx_input["prev_txid"], tx_input["prev_vout"]): transaction
@@ -209,6 +233,12 @@ def detect_worms(transactions: list[dict]) -> list[dict]:
             "avg_branching_factor": round(len(all_outputs) / len(chain), 2),
             "value_retention_ratio": round(value_retention_ratio, 4),
         }
+        labelled_addresses = {output["address"] for transaction in chain for output in transaction["outputs"]}
+        labelled_addresses.update(
+            output["address"] for transaction in chain for tx_input in transaction["inputs"]
+            if (output := output_index.get((tx_input["prev_txid"], tx_input["prev_vout"]))) is not None
+        )
+        entity_labels = entity_labels_for_addresses(labelled_addresses, address_labels or {})
         worms.append({
             "id": f"worm:{chain_ids[0]}:{chain_ids[-1]}",
             "pattern": "Worm",
@@ -218,13 +248,14 @@ def detect_worms(transactions: list[dict]) -> list[dict]:
             "value_btc": round(transferred, 8),
             "time_range": {"start": chain[0]["timestamp"], "end": chain[-1]["timestamp"]},
             "features": features,
+            "entity_labels": entity_labels,
             "evidence": [
                 f"{len(chain_ids)} transactions repeatedly spend the main UTXO across {hop_count} hops",
                 f"The full chain completes in {duration} seconds, averaging {avg_hop_seconds:.1f} seconds per hop",
                 f"Output addresses are reused {address_reuse_count} times, a reuse rate of {address_reuse_ratio:.0%}",
                 f"{small_output_count} low-value side outputs represent {small_output_ratio:.0%} of all outputs",
                 f"The final hop retains {value_retention_ratio:.0%} of the initial main-path value"
-            ]
+            ] + entity_evidence(entity_labels)
         })
     return worms
 
@@ -233,13 +264,13 @@ def parse_time(timestamp: str):
     return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
 
 
-def detect_anomalies(transactions: list[dict]) -> list[dict]:
+def detect_anomalies(transactions: list[dict], address_labels: dict[str, dict] | None = None) -> list[dict]:
     """逐笔执行异常规则，返回按风险从高到低排列的结果。"""
     anomalies = []
 
     for transaction in transactions:
-        collection_result = detect_collection(transaction)
-        split_result = detect_split(transaction)
+        collection_result = detect_collection(transaction, address_labels)
+        split_result = detect_split(transaction, address_labels)
 
         if collection_result is not None:
             anomalies.append(collection_result)
@@ -247,7 +278,7 @@ def detect_anomalies(transactions: list[dict]) -> list[dict]:
         if split_result is not None:
             anomalies.append(split_result)
 
-    anomalies.extend(detect_worms(transactions))
+    anomalies.extend(detect_worms(transactions, address_labels))
 
     return sorted(
         anomalies,

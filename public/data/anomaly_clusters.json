@@ -57,12 +57,21 @@
         "avg_branching_factor": 3.0,
         "value_retention_ratio": 0.635
       },
+      "entity_labels": [
+        {
+          "address": "exchange_deposit",
+          "entity": "DemoExchange",
+          "category": "Exchange",
+          "confidence": "Demonstration"
+        }
+      ],
       "evidence": [
         "25 transactions repeatedly spend the main UTXO across 24 hops",
         "The full chain completes in 72 seconds, averaging 3.0 seconds per hop",
         "Output addresses are reused 64 times, a reuse rate of 85%",
         "50 low-value side outputs represent 67% of all outputs",
-        "The final hop retains 64% of the initial main-path value"
+        "The final hop retains 64% of the initial main-path value",
+        "Flow touches labelled Exchange entity DemoExchange (Demonstration confidence)"
       ]
     }
   ]

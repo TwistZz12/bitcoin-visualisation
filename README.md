@@ -82,6 +82,16 @@ values are converted to BTC and API addresses are mapped to the graph schema
 before anomaly detection runs. `data/fixtures/bitcoin_api_sample.json` shows
 the supported API-style format.
 
+## Address intelligence
+
+`data/fixtures/address_labels.json` is a small, local address-label source.
+Its labels are added to UTXO nodes and to the selected anomaly's explanatory
+evidence. They are contextual information only: an `Exchange` label does not
+by itself increase an anomaly score or establish illicit activity. The checked-in
+`DemoExchange` label is synthetic and exists solely to demonstrate the feature;
+the same schema can later be populated from a documented public or commercial
+attribution source.
+
 To reproduce the checked-in real-mainnet case from the public Blockstream
 Esplora API, run:
 

@@ -94,7 +94,10 @@
       "vout": 0,
       "address": "exchange_deposit",
       "value_btc": 8.0,
-      "spent_by": "tx_worm_001"
+      "spent_by": "tx_worm_001",
+      "entity_label": "DemoExchange",
+      "entity_category": "Exchange",
+      "label_confidence": "Demonstration"
     },
     {
       "id": "utxo:tx_exchange_fund_004:1",

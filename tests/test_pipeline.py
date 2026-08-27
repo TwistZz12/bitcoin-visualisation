@@ -7,6 +7,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from build_utxo_graph import build_utxo_graph
+from address_labels import load_address_labels
 from detect_patterns import detect_anomalies
 from normalize_transactions import normalize_transactions
 
@@ -32,6 +33,12 @@ class PipelineTests(unittest.TestCase):
         self.assertGreaterEqual(worm["risk_score"], 65)
         self.assertIn("avg_hop_seconds", worm["features"])
         self.assertEqual(len(worm["evidence"]), 5)
+
+    def test_address_labels_enrich_worm_evidence_without_changing_detection_rule(self):
+        labels = load_address_labels()
+        worm = next(item for item in detect_anomalies(self.transactions, labels) if item["pattern"] == "Worm")
+        self.assertEqual(worm["entity_labels"][0]["entity"], "DemoExchange")
+        self.assertTrue(any("Exchange entity DemoExchange" in item for item in worm["evidence"]))
 
     def test_risk_scores_are_bounded(self):
         for anomaly in detect_anomalies(self.transactions):

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from build_utxo_graph import build_utxo_graph
+from address_labels import load_address_labels
 from detect_patterns import detect_anomalies
 from normalize_transactions import normalize_transactions
 
@@ -30,9 +31,10 @@ def run_pipeline(input_file: Path | None = None) -> dict:
         source_data = json.load(file)
 
     transactions = normalize_transactions(source_data)
+    address_labels = load_address_labels()
 
-    graph = build_utxo_graph(transactions)
-    anomalies = detect_anomalies(transactions)
+    graph = build_utxo_graph(transactions, address_labels)
+    anomalies = detect_anomalies(transactions, address_labels)
     anomaly_data = {
         "metadata": {
             "source_transaction_count": len(transactions),

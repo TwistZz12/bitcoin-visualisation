@@ -12,7 +12,7 @@ def get_utxo_id(txid: str, vout: int) -> str:
     return f"utxo:{txid}:{vout}"
 
 
-def build_utxo_graph(transactions: list[dict]) -> dict:
+def build_utxo_graph(transactions: list[dict], address_labels: dict[str, dict] | None = None) -> dict:
     """
     将交易列表转换为图结构。
 
@@ -24,6 +24,7 @@ def build_utxo_graph(transactions: list[dict]) -> dict:
     - creates：Transaction -> UTXO
     - spends：UTXO -> Transaction
     """
+    address_labels = address_labels or {}
     nodes = []
     edges = []
     utxo_index = {}
@@ -57,6 +58,10 @@ def build_utxo_graph(transactions: list[dict]) -> dict:
                 "value_btc": output["value_btc"],
                 "spent_by": None
             }
+            if label := address_labels.get(output["address"]):
+                utxo["entity_label"] = label["entity"]
+                utxo["entity_category"] = label["category"]
+                utxo["label_confidence"] = label["confidence"]
 
             nodes.append(utxo)
             utxo_index[utxo_id] = utxo
@@ -116,6 +121,10 @@ def build_utxo_graph(transactions: list[dict]) -> dict:
                     "spent_by": None,
                     "external": True,
                 }
+                if label := address_labels.get(previous_utxo["address"]):
+                    previous_utxo["entity_label"] = label["entity"]
+                    previous_utxo["entity_category"] = label["category"]
+                    previous_utxo["label_confidence"] = label["confidence"]
                 nodes.append(previous_utxo)
                 utxo_index[utxo_id] = previous_utxo
 

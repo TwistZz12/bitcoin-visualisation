@@ -26,6 +26,7 @@ LIVE_WINDOW_CACHE: dict[tuple[str, int, int], dict] = {}
 # CLI pipeline and this HTTP service.
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 from build_utxo_graph import build_utxo_graph  # noqa: E402
+from address_labels import load_address_labels  # noqa: E402
 from detect_patterns import detect_anomalies  # noqa: E402
 from normalize_transactions import normalize_transactions  # noqa: E402
 
@@ -36,7 +37,8 @@ def load_analysis(dataset: str | None = None) -> tuple[list[dict], dict, list[di
     source_path = dataset_path(dataset)
     with source_path.open("r", encoding="utf-8") as file:
         transactions = normalize_transactions(json.load(file))
-    return transactions, build_utxo_graph(transactions), detect_anomalies(transactions)
+    address_labels = load_address_labels()
+    return transactions, build_utxo_graph(transactions, address_labels), detect_anomalies(transactions, address_labels)
 
 
 def dataset_path(dataset: str | None = None) -> Path:
@@ -114,8 +116,9 @@ def fetch_live_analysis(window_blocks: int, transactions_per_block: int) -> dict
 
     transactions_by_block = [normalize_transactions(items) for items in raw_transactions_by_block]
     transactions = [transaction for items in transactions_by_block for transaction in items]
-    graph_data = build_utxo_graph(transactions)
-    detected = detect_anomalies(transactions)
+    address_labels = load_address_labels()
+    graph_data = build_utxo_graph(transactions, address_labels)
+    detected = detect_anomalies(transactions, address_labels)
     result = {
         "metadata": {
             "dataset": "live-rolling-window",
