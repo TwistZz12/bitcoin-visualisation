@@ -90,31 +90,39 @@ def build_live_overview(blocks: list[dict], transactions_by_block: list[list[dic
     return list(reversed(overview))
 
 
-def fetch_mempool_window(limit: int) -> tuple[list[dict], tuple[str, ...]]:
+def fetch_mempool_window(limit: int) -> tuple[list[dict], tuple[str, ...], str]:
     """Retain recent unconfirmed transactions long enough to expose dependencies."""
-    recent = fetch_esplora_json("mempool/recent")
+    try:
+        recent = fetch_esplora_json("mempool/recent")
+    except Exception:
+        # Mempool is volatile and public API requests can be rate-limited.
+        # Confirmed-block analysis remains useful when this optional source fails.
+        return [record["transaction"] for record in MEMPOOL_HISTORY.values()], (), "unavailable"
     if not isinstance(recent, list):
-        raise ValueError("Esplora returned an invalid mempool transaction list")
+        return [record["transaction"] for record in MEMPOOL_HISTORY.values()], (), "unavailable"
     txids = tuple(item["txid"] for item in recent[:limit] if isinstance(item, dict) and item.get("txid"))
     now = datetime.now(timezone.utc)
     for txid in txids:
         if txid not in MEMPOOL_HISTORY:
-            raw_transaction = fetch_esplora_json(f"tx/{txid}")
+            try:
+                raw_transaction = fetch_esplora_json(f"tx/{txid}")
+            except Exception:
+                continue
             if not isinstance(raw_transaction, dict):
-                raise ValueError("Esplora returned an invalid mempool transaction")
+                continue
             raw_transaction["mempool"] = True
             raw_transaction["timestamp"] = now.isoformat().replace("+00:00", "Z")
             MEMPOOL_HISTORY[txid] = {"transaction": raw_transaction, "observed_at": now}
     for txid, record in list(MEMPOOL_HISTORY.items()):
         if now - record["observed_at"] > MEMPOOL_RETENTION:
             del MEMPOOL_HISTORY[txid]
-    return [record["transaction"] for record in MEMPOOL_HISTORY.values()], txids
+    return [record["transaction"] for record in MEMPOOL_HISTORY.values()], txids, "available"
 
 
 def fetch_live_analysis(window_blocks: int, transactions_per_block: int, mempool_transactions: int) -> dict:
     """Build a cached rolling window of confirmed blocks plus recent mempool context."""
     tip_hash = str(fetch_esplora_json("blocks/tip/hash"))
-    raw_mempool_transactions, mempool_txids = fetch_mempool_window(mempool_transactions)
+    raw_mempool_transactions, mempool_txids, mempool_status = fetch_mempool_window(mempool_transactions)
     cache_key = (tip_hash, window_blocks, transactions_per_block, mempool_txids)
     if cache_key in LIVE_WINDOW_CACHE:
         cached = LIVE_WINDOW_CACHE[cache_key]
@@ -160,6 +168,7 @@ def fetch_live_analysis(window_blocks: int, transactions_per_block: int, mempool
             "confirmed_transaction_count": len(transactions) - len(mempool),
             "mempool_transaction_count": len(mempool),
             "mempool_retention_minutes": int(MEMPOOL_RETENTION.total_seconds() / 60),
+            "mempool_status": mempool_status,
             "cache_hit": False,
         },
         "overview": build_live_overview(blocks, transactions_by_block, detected),

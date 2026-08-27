@@ -63,6 +63,7 @@ export default function Home() {
 
   const loadLiveAnalysis = useCallback(async () => {
     setLiveLoading(true);
+    setError(null);
     try {
       const response = await fetch(`${apiBase}/api/live/analysis?window_blocks=6&transactions_per_block=25&mempool_transactions=10`);
       if (!response.ok) throw new Error("Unable to load the rolling Bitcoin transaction window");
@@ -88,6 +89,7 @@ export default function Home() {
   useEffect(() => {
     async function loadData() {
       try {
+        setError(null);
         const [anomalyResponse, graphResponse, metadataResponse, datasetsResponse] = await Promise.all([fetch(`${apiBase}/api/anomalies${datasetQuery}`), fetch(`${apiBase}/api/graph${datasetQuery}`), fetch(`${apiBase}/api/metadata${datasetQuery}`), fetch(`${apiBase}/api/datasets`)]);
         if (!anomalyResponse.ok || !graphResponse.ok || !metadataResponse.ok || !datasetsResponse.ok) throw new Error("Unable to load analysis data from the backend API");
         const anomalyData: AnomalyData = await anomalyResponse.json();
