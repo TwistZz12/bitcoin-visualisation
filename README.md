@@ -42,7 +42,7 @@ Useful endpoints:
 - `GET /api/anomalies/{cluster_id}`
 - `GET /api/transactions/{txid}`
 - `GET /api/live/status`
-- `GET /api/live/analysis?window_blocks=6&transactions_per_block=25`
+- `GET /api/live/analysis?window_blocks=6&transactions_per_block=25&mempool_transactions=10`
 - `GET /api/live/transactions/{txid}`
 
 ## Data flow
@@ -66,11 +66,12 @@ transaction data later.
 
 Live mode uses the public Bitcoin Esplora endpoints to analyse a rolling
 window of consecutive blocks. By default it samples the first 25 transactions
-from each of the latest 6 blocks (up to 150 transactions), runs the same
-normalisation, UTXO graph construction, and anomaly rules as the demo mode,
-then returns both a per-block risk overview and individual anomaly clusters.
-The UI refreshes at most every 30 seconds. Results are cached while the chain
-tip is unchanged, avoiding repeated requests for the same window.
+from each of the latest 6 blocks (up to 150 confirmed transactions) and the
+10 most recently observed mempool transactions. Mempool transactions are kept
+for 15 minutes in process memory so dependencies seen across refreshes can be
+analysed together. The UI refreshes at most every 30 seconds. Mempool timestamps
+are observation times, not claimed broadcast times, and any resulting Worm
+signal is therefore an investigative lead rather than a final attribution.
 
 To switch the Python API to another transaction dataset, set
 `CHAINSCOPE_DATASET` to a JSON file containing a `transactions` array before

@@ -23,6 +23,8 @@ type AnalysisMetadata = {
   block_height?: number;
   block_hash?: string;
   retrieved_at?: string;
+  confirmed_transaction_count?: number;
+  mempool_transaction_count?: number;
 };
 
 type DatasetOption = { name: string; transaction_count: number; anomaly_count: number };
@@ -62,7 +64,7 @@ export default function Home() {
   const loadLiveAnalysis = useCallback(async () => {
     setLiveLoading(true);
     try {
-      const response = await fetch(`${apiBase}/api/live/analysis?window_blocks=6&transactions_per_block=25`);
+      const response = await fetch(`${apiBase}/api/live/analysis?window_blocks=6&transactions_per_block=25&mempool_transactions=10`);
       if (!response.ok) throw new Error("Unable to load the rolling Bitcoin transaction window");
       const result = await response.json() as { metadata: AnalysisMetadata; graph: UtxoGraphData; anomalies: AnomalyCluster[]; overview: LiveOverview[] };
       setMetadata(result.metadata);
@@ -116,7 +118,7 @@ export default function Home() {
 
   return <main>
     <header><div className="brand">◈ <b>ChainScope</b><span>Anomaly Transaction Graph Explorer</span></div><div className="live"><button className={`mode-button ${!liveMode ? "active" : ""}`} onClick={() => setLiveMode(false)}>Demo</button><button className={`mode-button ${liveMode ? "active" : ""}`} onClick={() => setLiveMode(true)}>Live</button>{liveMode ? ` · block ${metadata?.block_height ?? "…"}${liveLoading ? " · refreshing…" : ""}` : <><span> · {metadata?.dataset_type ?? "Analysis API"} · </span><select className="dataset-select" value={dataset ?? ""} onChange={event => { setDataset(event.target.value); setTransactionDetails(null); }} aria-label="Select transaction dataset">{datasets.map(option => <option value={option.name} key={option.name}>{option.name} · {option.transaction_count} tx</option>)}</select></>}</div></header>
-    <nav><button className="play" onClick={() => setPlaying(!playing)}>{playing ? "Ⅱ" : "▶"}</button><div><b>{liveMode ? `Block ${metadata?.block_height ?? "…"}` : "2024-05-18"}</b><small>{liveMode ? `${metadata?.transaction_count ?? 0} transactions across ${liveOverview.length} blocks` : "Demo transaction window"}</small></div>{liveMode ? <div className="live-overview" aria-label="Rolling block window overview">{liveOverview.map(block => <div className="block-bar" key={block.height} title={`Block ${block.height}: ${block.transaction_count} transactions, ${block.anomaly_count} anomalies`}><i style={{ height: `${Math.max(12, Math.min(100, block.max_risk))}%` }} /><small>{block.height}</small><b>{block.anomaly_count}</b></div>)}</div> : <div className="timeline"><i /><b style={{ left: playing ? "72%" : "53%" }} /></div>}<div className="tags">{["Collection", "Split", "Worm"].map(tag => <em key={tag}>{tag}</em>)}</div></nav>
+    <nav><button className="play" onClick={() => setPlaying(!playing)}>{playing ? "Ⅱ" : "▶"}</button><div><b>{liveMode ? `Block ${metadata?.block_height ?? "…"}` : "2024-05-18"}</b><small>{liveMode ? `${metadata?.confirmed_transaction_count ?? 0} confirmed + ${metadata?.mempool_transaction_count ?? 0} mempool transactions` : "Demo transaction window"}</small></div>{liveMode ? <div className="live-overview" aria-label="Rolling block window overview">{liveOverview.map(block => <div className="block-bar" key={block.height} title={`Block ${block.height}: ${block.transaction_count} transactions, ${block.anomaly_count} anomalies`}><i style={{ height: `${Math.max(12, Math.min(100, block.max_risk))}%` }} /><small>{block.height}</small><b>{block.anomaly_count}</b></div>)}</div> : <div className="timeline"><i /><b style={{ left: playing ? "72%" : "53%" }} /></div>}<div className="tags">{["Collection", "Split", "Worm"].map(tag => <em key={tag}>{tag}</em>)}</div></nav>
     <section className="layout">
       <aside><label>Anomaly threshold <b>≥ {score}</b><input type="range" min="50" max="95" value={score} onChange={event => setScore(+event.target.value)} /></label><p className="eyebrow">PATTERN QUEUE</p><h1>Anomaly clusters <sup>{visibleAnomalies.length}</sup></h1>{visibleAnomalies.map(anomaly => <button className={`case ${anomaly.id === activeId ? "selected" : ""}`} onClick={() => setActiveId(anomaly.id)} key={anomaly.id}><i>{anomaly.pattern}</i><span><b>{anomaly.pattern} / {shortenId(anomaly.transactions[0])}</b><small>{anomaly.transaction_count} transaction · {formatBtc(anomaly.value_btc)} BTC</small></span><strong>{anomaly.risk_score}</strong></button>)}</aside>
       <article>

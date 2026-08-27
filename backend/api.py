@@ -8,7 +8,7 @@ import json
 import os
 import ssl
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -20,7 +20,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATASET = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transactions.json"
 DATASET_DIR = PROJECT_ROOT / "data" / "fixtures"
 ESPLORA_API = os.getenv("CHAINSCOPE_ESPLORA_API", "https://blockstream.info/api")
-LIVE_WINDOW_CACHE: dict[tuple[str, int, int], dict] = {}
+LIVE_WINDOW_CACHE: dict[tuple[str, int, int, tuple[str, ...]], dict] = {}
+MEMPOOL_HISTORY: dict[str, dict] = {}
+MEMPOOL_RETENTION = timedelta(minutes=15)
 
 # The existing pure analysis functions remain the source of truth for both the
 # CLI pipeline and this HTTP service.
@@ -88,10 +90,32 @@ def build_live_overview(blocks: list[dict], transactions_by_block: list[list[dic
     return list(reversed(overview))
 
 
-def fetch_live_analysis(window_blocks: int, transactions_per_block: int) -> dict:
-    """Build a cached rolling window from consecutive recent Bitcoin blocks."""
+def fetch_mempool_window(limit: int) -> tuple[list[dict], tuple[str, ...]]:
+    """Retain recent unconfirmed transactions long enough to expose dependencies."""
+    recent = fetch_esplora_json("mempool/recent")
+    if not isinstance(recent, list):
+        raise ValueError("Esplora returned an invalid mempool transaction list")
+    txids = tuple(item["txid"] for item in recent[:limit] if isinstance(item, dict) and item.get("txid"))
+    now = datetime.now(timezone.utc)
+    for txid in txids:
+        if txid not in MEMPOOL_HISTORY:
+            raw_transaction = fetch_esplora_json(f"tx/{txid}")
+            if not isinstance(raw_transaction, dict):
+                raise ValueError("Esplora returned an invalid mempool transaction")
+            raw_transaction["mempool"] = True
+            raw_transaction["timestamp"] = now.isoformat().replace("+00:00", "Z")
+            MEMPOOL_HISTORY[txid] = {"transaction": raw_transaction, "observed_at": now}
+    for txid, record in list(MEMPOOL_HISTORY.items()):
+        if now - record["observed_at"] > MEMPOOL_RETENTION:
+            del MEMPOOL_HISTORY[txid]
+    return [record["transaction"] for record in MEMPOOL_HISTORY.values()], txids
+
+
+def fetch_live_analysis(window_blocks: int, transactions_per_block: int, mempool_transactions: int) -> dict:
+    """Build a cached rolling window of confirmed blocks plus recent mempool context."""
     tip_hash = str(fetch_esplora_json("blocks/tip/hash"))
-    cache_key = (tip_hash, window_blocks, transactions_per_block)
+    raw_mempool_transactions, mempool_txids = fetch_mempool_window(mempool_transactions)
+    cache_key = (tip_hash, window_blocks, transactions_per_block, mempool_txids)
     if cache_key in LIVE_WINDOW_CACHE:
         cached = LIVE_WINDOW_CACHE[cache_key]
         cached["metadata"]["cache_hit"] = True
@@ -115,14 +139,16 @@ def fetch_live_analysis(window_blocks: int, transactions_per_block: int) -> dict
         current_hash = previous_hash
 
     transactions_by_block = [normalize_transactions(items) for items in raw_transactions_by_block]
+    mempool = normalize_transactions(raw_mempool_transactions) if raw_mempool_transactions else []
     transactions = [transaction for items in transactions_by_block for transaction in items]
+    transactions.extend(mempool)
     address_labels = load_address_labels()
     graph_data = build_utxo_graph(transactions, address_labels)
     detected = detect_anomalies(transactions, address_labels)
     result = {
         "metadata": {
             "dataset": "live-rolling-window",
-            "dataset_type": "Bitcoin mainnet rolling window",
+            "dataset_type": "Bitcoin mainnet rolling window + mempool",
             "source_api": ESPLORA_API,
             "transaction_count": len(transactions),
             "anomaly_count": len(detected),
@@ -131,6 +157,9 @@ def fetch_live_analysis(window_blocks: int, transactions_per_block: int) -> dict
             "block_hash": tip_hash,
             "window_block_count": len(blocks),
             "transactions_per_block": transactions_per_block,
+            "confirmed_transaction_count": len(transactions) - len(mempool),
+            "mempool_transaction_count": len(mempool),
+            "mempool_retention_minutes": int(MEMPOOL_RETENTION.total_seconds() / 60),
             "cache_hit": False,
         },
         "overview": build_live_overview(blocks, transactions_by_block, detected),
@@ -199,13 +228,13 @@ def datasets() -> dict:
 
 @app.get("/api/live/status")
 def live_status() -> dict:
-    return {"enabled": True, "source_api": ESPLORA_API, "refresh_interval_seconds": 30, "window_blocks_default": 6, "transactions_per_block_default": 25}
+    return {"enabled": True, "source_api": ESPLORA_API, "refresh_interval_seconds": 30, "window_blocks_default": 6, "transactions_per_block_default": 25, "mempool_transactions_default": 10, "mempool_retention_minutes": 15}
 
 
 @app.get("/api/live/analysis")
-def live_analysis(window_blocks: int = Query(6, ge=2, le=12), transactions_per_block: int = Query(25, ge=5, le=25)) -> dict:
+def live_analysis(window_blocks: int = Query(6, ge=2, le=12), transactions_per_block: int = Query(25, ge=5, le=25), mempool_transactions: int = Query(10, ge=0, le=10)) -> dict:
     try:
-        return fetch_live_analysis(window_blocks, transactions_per_block)
+        return fetch_live_analysis(window_blocks, transactions_per_block, mempool_transactions)
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"Unable to fetch live Bitcoin data: {error}") from error
 

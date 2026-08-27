@@ -58,6 +58,7 @@ def normalize_transaction(transaction: dict) -> dict:
         "txid": txid,
         "timestamp": _timestamp(transaction),
         "block_height": int(transaction.get("block_height") or transaction.get("status", {}).get("block_height") or 0),
+        "mempool": bool(transaction.get("mempool", False)),
         "inputs": inputs,
         "outputs": outputs,
     }

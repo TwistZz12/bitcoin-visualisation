@@ -59,6 +59,18 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(normalized["block_height"], 100)
         self.assertTrue(normalized["timestamp"].endswith("Z"))
 
+    def test_observed_mempool_transaction_is_preserved(self):
+        source = {
+            "transactions": [{
+                "txid": "mempool_tx_1",
+                "timestamp": "2024-05-18T10:00:00Z",
+                "mempool": True,
+                "vin": [],
+                "vout": [{"scriptpubkey_address": "bc1qmempool", "value": 1000}],
+            }]
+        }
+        self.assertTrue(normalize_transactions(source)[0]["mempool"])
+
     def test_checked_in_real_case_has_source_metadata(self):
         case = json.loads((PROJECT_ROOT / "data" / "fixtures" / "real_blockstream_case.json").read_text(encoding="utf-8"))
         self.assertEqual(case["metadata"]["network"], "bitcoin-mainnet")
