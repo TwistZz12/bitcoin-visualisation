@@ -8,6 +8,7 @@ import json
 import os
 import ssl
 import sys
+from time import sleep
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -21,8 +22,10 @@ DEFAULT_DATASET = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transaction
 DATASET_DIR = PROJECT_ROOT / "data" / "fixtures"
 ESPLORA_API = os.getenv("CHAINSCOPE_ESPLORA_API", "https://blockstream.info/api")
 LIVE_WINDOW_CACHE: dict[tuple[str, int, int, tuple[str, ...]], dict] = {}
+LAST_SUCCESSFUL_LIVE_SNAPSHOT: dict | None = None
 MEMPOOL_HISTORY: dict[str, dict] = {}
 MEMPOOL_RETENTION = timedelta(minutes=15)
+ESPLORA_RETRY_ATTEMPTS = 3
 
 # The existing pure analysis functions remain the source of truth for both the
 # CLI pipeline and this HTTP service.
@@ -62,12 +65,20 @@ def fetch_esplora_json(path: str) -> object:
     system_ca = Path("/etc/ssl/cert.pem")
     if system_ca.is_file():
         context = ssl.create_default_context(cafile=str(system_ca))
-    with urlopen(request, timeout=20, context=context) as response:
-        payload = response.read().decode("utf-8")
+    last_error = None
+    for attempt in range(ESPLORA_RETRY_ATTEMPTS):
         try:
-            return json.loads(payload)
-        except json.JSONDecodeError:
-            return payload.strip()
+            with urlopen(request, timeout=12, context=context) as response:
+                payload = response.read().decode("utf-8")
+                try:
+                    return json.loads(payload)
+                except json.JSONDecodeError:
+                    return payload.strip()
+        except Exception as error:
+            last_error = error
+            if attempt < ESPLORA_RETRY_ATTEMPTS - 1:
+                sleep(0.4 * (attempt + 1))
+    raise RuntimeError(f"Esplora request failed for {path}: {last_error}")
 
 
 def build_live_overview(blocks: list[dict], transactions_by_block: list[list[dict]], anomalies: list[dict]) -> list[dict]:
@@ -170,6 +181,7 @@ def fetch_live_analysis(window_blocks: int, transactions_per_block: int, mempool
             "mempool_retention_minutes": int(MEMPOOL_RETENTION.total_seconds() / 60),
             "mempool_status": mempool_status,
             "cache_hit": False,
+            "stale": False,
         },
         "overview": build_live_overview(blocks, transactions_by_block, detected),
         "graph": graph_data,
@@ -237,14 +249,23 @@ def datasets() -> dict:
 
 @app.get("/api/live/status")
 def live_status() -> dict:
-    return {"enabled": True, "source_api": ESPLORA_API, "refresh_interval_seconds": 30, "window_blocks_default": 6, "transactions_per_block_default": 25, "mempool_transactions_default": 10, "mempool_retention_minutes": 15}
+    return {"enabled": True, "source_api": ESPLORA_API, "refresh_interval_seconds": 30, "window_blocks_default": 6, "transactions_per_block_default": 25, "mempool_transactions_default": 10, "mempool_retention_minutes": 15, "request_retry_attempts": ESPLORA_RETRY_ATTEMPTS}
 
 
 @app.get("/api/live/analysis")
 def live_analysis(window_blocks: int = Query(6, ge=2, le=12), transactions_per_block: int = Query(25, ge=5, le=25), mempool_transactions: int = Query(10, ge=0, le=10)) -> dict:
+    global LAST_SUCCESSFUL_LIVE_SNAPSHOT
     try:
-        return fetch_live_analysis(window_blocks, transactions_per_block, mempool_transactions)
+        snapshot = fetch_live_analysis(window_blocks, transactions_per_block, mempool_transactions)
+        LAST_SUCCESSFUL_LIVE_SNAPSHOT = snapshot
+        return snapshot
     except Exception as error:
+        if LAST_SUCCESSFUL_LIVE_SNAPSHOT is not None:
+            # Round-trip through JSON to keep the cached snapshot immutable.
+            fallback = json.loads(json.dumps(LAST_SUCCESSFUL_LIVE_SNAPSHOT))
+            fallback["metadata"]["stale"] = True
+            fallback["metadata"]["live_error"] = "Live refresh failed; showing the last successful snapshot"
+            return fallback
         raise HTTPException(status_code=502, detail=f"Unable to fetch live Bitcoin data: {error}") from error
 
 
