@@ -59,6 +59,12 @@ def dataset_path(dataset: str | None = None) -> Path:
     return path
 
 
+def fixture_metadata(dataset: str | None = None) -> dict:
+    """Read optional case provenance stored alongside a fixture."""
+    with dataset_path(dataset).open("r", encoding="utf-8") as file:
+        return json.load(file).get("metadata", {})
+
+
 def fetch_esplora_json(path: str) -> object:
     request = Request(f"{ESPLORA_API.rstrip('/')}/{path.lstrip('/')}", headers={"User-Agent": "ChainScope/1.0"})
     context = ssl.create_default_context()
@@ -223,11 +229,17 @@ def health() -> dict:
 @app.get("/api/metadata")
 def metadata(dataset: str | None = Query(None)) -> dict:
     transactions, graph_data, detected = load_analysis(dataset)
+    source_metadata = fixture_metadata(dataset)
     return {
         "service": "chainscope-analysis",
         "api_version": app.version,
         "dataset": dataset_path(dataset).name,
         "dataset_type": "Synthetic demo dataset" if "worm" in dataset_path(dataset).name or "demo" in dataset_path(dataset).name else "Bitcoin transaction dataset",
+        "title": source_metadata.get("title"),
+        "source_type": source_metadata.get("source_type"),
+        "source_url": source_metadata.get("source_url"),
+        "confidence": source_metadata.get("confidence"),
+        "interpretation": source_metadata.get("interpretation"),
         "transaction_count": len(transactions),
         "anomaly_count": len(detected),
         "graph_node_count": graph_data["metadata"]["node_count"],
@@ -241,7 +253,14 @@ def datasets() -> dict:
     for path in sorted(DATASET_DIR.glob("*.json")):
         try:
             transactions, _, detected = load_analysis(path.name)
-            available.append({"name": path.name, "transaction_count": len(transactions), "anomaly_count": len(detected)})
+            source_metadata = fixture_metadata(path.name)
+            available.append({
+                "name": path.name,
+                "title": source_metadata.get("title"),
+                "source_type": source_metadata.get("source_type"),
+                "transaction_count": len(transactions),
+                "anomaly_count": len(detected),
+            })
         except (ValueError, KeyError):
             continue
     return {"datasets": available, "selected": dataset_path().name}

@@ -93,6 +93,29 @@ by itself increase an anomaly score or establish illicit activity. The checked-i
 the same schema can later be populated from a documented public or commercial
 attribution source.
 
+## Reproducible real-world cases
+
+`data/fixtures/case_catalog.json` records the provenance of real-world case
+fixtures. Each case stores a seed address or transaction, a source URL,
+confidence statement, retrieval timestamp, and a limitation statement. The
+included `ofac_cryptex_case.json` is a Bitcoin-mainnet context around a public
+OFAC-listed Cryptex BTC address. It is an investigation case, not a claim that
+all adjacent addresses are sanctioned or illicit.
+
+Create another case with:
+
+```bash
+python3 scripts/fetch_esplora_case.py \
+  --txid <transaction-id> \
+  --case-id <case-id> \
+  --title "Case title" \
+  --source-type <source-category> \
+  --source-url <provenance-url> \
+  --seed-address <address> \
+  --confidence "Source confidence" \
+  --output data/fixtures/<case-id>.json
+```
+
 To reproduce the checked-in real-mainnet case from the public Blockstream
 Esplora API, run:
 

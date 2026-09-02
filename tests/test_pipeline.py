@@ -40,6 +40,13 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(worm["entity_labels"][0]["entity"], "DemoExchange")
         self.assertTrue(any("Exchange entity DemoExchange" in item for item in worm["evidence"]))
 
+    def test_real_case_fixture_has_provenance_and_detectable_structures(self):
+        case = json.loads((PROJECT_ROOT / "data" / "fixtures" / "ofac_cryptex_case.json").read_text(encoding="utf-8"))
+        self.assertEqual(case["metadata"]["source_type"], "official-sanctions")
+        self.assertEqual(case["metadata"]["network"], "bitcoin-mainnet")
+        patterns = {item["pattern"] for item in detect_anomalies(normalize_transactions(case))}
+        self.assertTrue({"Collection", "Split"}.issubset(patterns))
+
     def test_risk_scores_are_bounded(self):
         for anomaly in detect_anomalies(self.transactions):
             self.assertGreaterEqual(anomaly["risk_score"], 0)

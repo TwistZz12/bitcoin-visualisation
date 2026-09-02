@@ -5,6 +5,12 @@
   },
   "labels": [
     {
+      "address": "13JtX4h7G5ZuNK5mFudKGq9DHLvvMFuNuz",
+      "entity": "Cryptex",
+      "category": "Sanctioned virtual-currency exchange",
+      "confidence": "Official sanctions source"
+    },
+    {
       "address": "exchange_deposit",
       "entity": "DemoExchange",
       "category": "Exchange",

@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {
+      "id": "ofac-cryptex-2024",
+      "title": "Cryptex risk-labelled Bitcoin flow",
+      "fixture": "ofac_cryptex_case.json",
+      "seed_address": "13JtX4h7G5ZuNK5mFudKGq9DHLvvMFuNuz",
+      "source_type": "official-sanctions",
+      "source_url": "https://ofac.treasury.gov/recent-actions/20240926",
+      "confidence": "Official sanctions source",
+      "interpretation": "The case traces publicly visible activity involving an OFAC-listed seed address. It does not infer that every adjacent address or transaction is sanctioned."
+    }
+  ]
+}

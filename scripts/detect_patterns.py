@@ -49,6 +49,18 @@ def entity_evidence(entity_labels: list[dict]) -> list[str]:
     ]
 
 
+def transaction_addresses(transaction: dict) -> set[str]:
+    """Include output addresses and any API-provided input prevout addresses."""
+    return {
+        address
+        for address in [
+            *(output.get("address") for output in transaction["outputs"]),
+            *(tx_input.get("prevout", {}).get("address") for tx_input in transaction["inputs"]),
+        ]
+        if address
+    }
+
+
 def detect_collection(transaction: dict, address_labels: dict[str, dict] | None = None) -> dict | None:
     """
     归集型交易：
@@ -73,9 +85,7 @@ def detect_collection(transaction: dict, address_labels: dict[str, dict] | None 
         + int(stats["largest_output_ratio"] * 15)
     )
 
-    entity_labels = entity_labels_for_addresses(
-        {output["address"] for output in transaction["outputs"]}, address_labels or {}
-    )
+    entity_labels = entity_labels_for_addresses(transaction_addresses(transaction), address_labels or {})
     return {
         "id": f"collection:{transaction['txid']}",
         "pattern": "Collection",
@@ -120,9 +130,7 @@ def detect_split(transaction: dict, address_labels: dict[str, dict] | None = Non
         + (2 - input_count) * 5
     )
 
-    entity_labels = entity_labels_for_addresses(
-        {output["address"] for output in transaction["outputs"]}, address_labels or {}
-    )
+    entity_labels = entity_labels_for_addresses(transaction_addresses(transaction), address_labels or {})
     return {
         "id": f"split:{transaction['txid']}",
         "pattern": "Split",
