@@ -9,6 +9,36 @@
       "source_url": "https://ofac.treasury.gov/recent-actions/20240926",
       "confidence": "Official sanctions source",
       "interpretation": "The case traces publicly visible activity involving an OFAC-listed seed address. It does not infer that every adjacent address or transaction is sanctioned."
+    },
+    {
+      "id": "ofac-garantex-2022",
+      "title": "Garantex exchange-labelled Bitcoin flow",
+      "fixture": "ofac_garantex_case.json",
+      "seed_address": "3Lpoy53K625zVeE47ZasiG5jGkAxJ27kh1",
+      "source_type": "official-sanctions",
+      "source_url": "https://ofac.treasury.gov/recent-actions/20220405",
+      "confidence": "Official sanctions source",
+      "interpretation": "The case traces publicly visible activity involving an OFAC-listed seed address. It does not infer that every adjacent address or transaction is sanctioned."
+    },
+    {
+      "id": "ofac-hydra-split-2022",
+      "title": "Hydra marketplace-labelled Split",
+      "fixture": "ofac_hydra_split_case.json",
+      "seed_address": "3K4rjdh8A5yi6LWvft2rbmyZvqEbPSSSX4",
+      "source_type": "official-sanctions",
+      "source_url": "https://ofac.treasury.gov/recent-actions/20220405",
+      "confidence": "Official sanctions source",
+      "interpretation": "The case visualises a structural Split around a publicly listed seed address. The structural signal is not a legal attribution for adjacent addresses."
+    },
+    {
+      "id": "ofac-hydra-collection-2022",
+      "title": "Hydra marketplace-labelled Collection",
+      "fixture": "ofac_hydra_collection_case.json",
+      "seed_address": "3K4rjdh8A5yi6LWvft2rbmyZvqEbPSSSX4",
+      "source_type": "official-sanctions",
+      "source_url": "https://ofac.treasury.gov/recent-actions/20220405",
+      "confidence": "Official sanctions source",
+      "interpretation": "The case visualises a structural Collection around a publicly listed seed address. The structural signal is not a legal attribution for adjacent addresses."
     }
   ]
 }

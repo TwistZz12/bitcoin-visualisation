@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATASET = PROJECT_ROOT / "data" / "fixtures" / "worm_cluster_transactions.json"
 DATASET_DIR = PROJECT_ROOT / "data" / "fixtures"
+CASE_CATALOG = DATASET_DIR / "case_catalog.json"
 ESPLORA_API = os.getenv("CHAINSCOPE_ESPLORA_API", "https://blockstream.info/api")
 LIVE_WINDOW_CACHE: dict[tuple[str, int, int, tuple[str, ...]], dict] = {}
 LAST_SUCCESSFUL_LIVE_SNAPSHOT: dict | None = None
@@ -63,6 +64,12 @@ def fixture_metadata(dataset: str | None = None) -> dict:
     """Read optional case provenance stored alongside a fixture."""
     with dataset_path(dataset).open("r", encoding="utf-8") as file:
         return json.load(file).get("metadata", {})
+
+
+def demo_dataset_names() -> set[str]:
+    """Expose only curated presentation demos, not format-test fixtures."""
+    catalog = json.loads(CASE_CATALOG.read_text(encoding="utf-8")) if CASE_CATALOG.is_file() else {"cases": []}
+    return {"worm_cluster_transactions.json", *(case["fixture"] for case in catalog.get("cases", []))}
 
 
 def fetch_esplora_json(path: str) -> object:
@@ -251,13 +258,16 @@ def metadata(dataset: str | None = Query(None)) -> dict:
 def datasets() -> dict:
     available = []
     for path in sorted(DATASET_DIR.glob("*.json")):
+        if path.name not in demo_dataset_names():
+            continue
         try:
             transactions, _, detected = load_analysis(path.name)
             source_metadata = fixture_metadata(path.name)
+            is_worm_benchmark = path.name == "worm_cluster_transactions.json"
             available.append({
                 "name": path.name,
-                "title": source_metadata.get("title"),
-                "source_type": source_metadata.get("source_type"),
+                "title": source_metadata.get("title") or ("High-frequency Worm benchmark" if is_worm_benchmark else path.stem),
+                "source_type": source_metadata.get("source_type") or ("synthetic benchmark" if is_worm_benchmark else None),
                 "transaction_count": len(transactions),
                 "anomaly_count": len(detected),
             })

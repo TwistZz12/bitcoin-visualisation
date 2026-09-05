@@ -5,6 +5,18 @@
   },
   "labels": [
     {
+      "address": "3K4rjdh8A5yi6LWvft2rbmyZvqEbPSSSX4",
+      "entity": "Hydra Market",
+      "category": "Sanctioned darknet marketplace",
+      "confidence": "Official sanctions source"
+    },
+    {
+      "address": "3Lpoy53K625zVeE47ZasiG5jGkAxJ27kh1",
+      "entity": "Garantex",
+      "category": "Sanctioned virtual-currency exchange",
+      "confidence": "Official sanctions source"
+    },
+    {
       "address": "13JtX4h7G5ZuNK5mFudKGq9DHLvvMFuNuz",
       "entity": "Cryptex",
       "category": "Sanctioned virtual-currency exchange",

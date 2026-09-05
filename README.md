@@ -102,6 +102,12 @@ included `ofac_cryptex_case.json` is a Bitcoin-mainnet context around a public
 OFAC-listed Cryptex BTC address. It is an investigation case, not a claim that
 all adjacent addresses are sanctioned or illicit.
 
+The presentation dataset menu intentionally exposes only the curated demo
+library: the synthetic high-frequency Worm benchmark plus the Cryptex,
+Garantex, Hydra Split, and Hydra Collection Bitcoin-mainnet cases. Format-test
+fixtures remain in the repository for regression testing but are not shown as
+presentation demos.
+
 Create another case with:
 
 ```bash
